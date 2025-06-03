@@ -70,8 +70,10 @@ app.use("/api/nguoihuong", require("./api/nguoihuong"));
 // công ty hà an kekhai_2902141757 (mst: 2902141757)
 app.use("/api/org/kekhai_2902141757", require("./api/org/kekhai_2902141757"));
 
+console.log(process.env.PORT);
+
 app.listen(process.env.PORT, () => {
-  const port = process.env.PORT;
+  const port = process.env.PORT
 
   console.log(`Server running at http://localhost:${port}`);
 });
