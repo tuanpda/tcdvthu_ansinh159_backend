@@ -9,7 +9,7 @@ const fs = require("fs");
 const path = require("path");
 
 // var folderAvatar = "/home/thuan/tcdvthu_client/static/avatar";
-var folderAvatar = "E:\CODE_APP\TCDVTHU\ANSINH159\tcdvthu_ansinh159_client\static\avatar";
+var folderAvatar = "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\avatar";
 var urlServer = "14.224.129.177:1970";
 
 // SET STORAGE
