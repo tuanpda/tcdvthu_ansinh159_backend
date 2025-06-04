@@ -355,6 +355,38 @@ router.get("/find-nguoihuong-cccd", async (req, res) => {
   }
 });
 
+// tim nguoi huong theo ma so bhxh
+router.get("/find-nguoihuong-masobhxh-theodstg", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input("soBhxh", req.query.soBhxh)
+      .query(
+        `SELECT * FROM dstg where soBhxh=@soBhxh and soBhxh<>''`
+      );
+    const nguoihuong = result.recordset;
+    res.json(nguoihuong);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// tim nguoi huong theo cccd
+router.get("/find-nguoihuong-cccd-theodstg", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input("soCmnd", req.query.soCmnd)
+      .query(`SELECT * FROM dstg where soCmnd=@soCmnd`);
+    const nguoihuong = result.recordset;
+    res.json(nguoihuong);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
 // tìm tên tỉnh theo mã tỉnh
 router.get("/find-tentinh", async (req, res) => {
   try {
