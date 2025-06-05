@@ -372,6 +372,23 @@ router.get("/find-nguoihuong-masobhxh-theodstg", async (req, res) => {
   }
 });
 
+// tim hạn thẻ người hưởng
+router.get("/find-nguoihuong-masobhxh-theodstg-timhanthe", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input("soSoBhxh", req.query.soSoBhxh)
+      .query(
+        `SELECT * FROM dulieuthe where soSoBhxh=@soSoBhxh and soSoBhxh<>''`
+      );
+    const nguoihuong = result.recordset;
+    res.json(nguoihuong);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
 // tim nguoi huong theo cccd
 router.get("/find-nguoihuong-cccd-theodstg", async (req, res) => {
   try {
@@ -386,6 +403,7 @@ router.get("/find-nguoihuong-cccd-theodstg", async (req, res) => {
     res.status(500).json(error);
   }
 });
+
 
 // tìm tên tỉnh theo mã tỉnh
 router.get("/find-tentinh", async (req, res) => {
