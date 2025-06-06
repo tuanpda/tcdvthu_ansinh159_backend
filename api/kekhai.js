@@ -20,7 +20,7 @@ var folderBienlaidientu =
   "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
 // var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
 // var folderBienlaidientu =
-//   "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+// "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
 
 var urlServer = "14.224.129.177:1970";
 
@@ -779,7 +779,7 @@ router.post("/ghidulieubienlai", async (req, res) => {
     const result = await transaction
       .request()
       .input("_id_hskk", dulieubienlai._id_hskk)
-      .input("sobienlai", dulieubienlai.sobienlai)
+      .input("sobienlai", nextInvoice)
       .input("ngaybienlai", dulieubienlai.ngaybienlai)
       .input("hoten", dulieubienlai.hoTen)
       .input("masobhxh", dulieubienlai.maSoBhxh)
@@ -802,11 +802,12 @@ router.post("/ghidulieubienlai", async (req, res) => {
       .input("tothon", dulieubienlai.tothon)
       .input("tenquanhuyen", dulieubienlai.tenquanhuyen)
       .input("tentinh", dulieubienlai.tentinh)
-      .input("active", 0).query(`
+      .input("active", 0)
+      .input("urlNameInvoice", dulieubienlai.urlNameInvoice).query(`
                   INSERT INTO bienlaidientu (_id_hskk, sobienlai, ngaybienlai, hoten, masobhxh, ngaysinh, gioitinh, cccd, sodienthoai, nguoithutien, loaihinh, sothang,
-                    tungay, denngay, tuthang, denthang, sotien, madaily, tendaily, hosoIdentity, maxacnhan, tothon, tenquanhuyen, tentinh, active)
+                    tungay, denngay, tuthang, denthang, sotien, madaily, tendaily, hosoIdentity, maxacnhan, tothon, tenquanhuyen, tentinh, active, urlNameInvoice)
                   VALUES (@_id_hskk, @sobienlai, @ngaybienlai, @hoten, @masobhxh, @ngaysinh, @gioitinh, @cccd, @sodienthoai, @nguoithutien, @loaihinh, @sothang,
-                    @tungay, @denngay, @tuthang, @denthang, @sotien, @madaily, @tendaily, @hosoIdentity, @maxacnhan, @tothon, @tenquanhuyen, @tentinh, @active);
+                    @tungay, @denngay, @tuthang, @denthang, @sotien, @madaily, @tendaily, @hosoIdentity, @maxacnhan, @tothon, @tenquanhuyen, @tentinh, @active, @urlNameInvoice);
               `);
 
     // cập nhật số biên lai
