@@ -16,7 +16,8 @@ const fs = require("fs");
 const path = require("path");
 
 // var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
-var folderBienlaidientu = "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
+// var folderBienlaidientu = "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
+var folderBienlaidientu = "D:\\";    // test máy tuấn
 var urlServer = "14.224.129.177:1970";
 
 // SET STORAGE
@@ -742,10 +743,9 @@ router.post("/saveresponsefrombhvntodb", async (req, res) => {
 
 router.post("/ghidulieubienlai", async (req, res) => {
   let dulieubienlai = req.body;
-  // console.log(dulieubienlai);
+  // console.log(req.body.hoTen);
 
   let transaction = null;
-  // console.log(dulieubienlai.sobienlai);
 
   try {
     // bắt đầu kết nối
@@ -753,6 +753,24 @@ router.post("/ghidulieubienlai", async (req, res) => {
     // Bắt đầu giao dịch
     transaction = new Transaction(pool);
     await transaction.begin();
+
+    const resultBienlai = await pool
+      .request()
+      .input("namtaichinh", dulieubienlai.currentYear)
+      .query(`SELECT MAX(sobienlai) AS max
+        FROM bienlai
+        WHERE namtaichinh = @namtaichinh;`);
+
+    let maxInvoiceStr = resultBienlai.recordset[0].max;
+        // console.log(maxInvoiceStr);
+    let nextInvoice = "";
+
+    if (!maxInvoiceStr) {
+      nextInvoice = "0000001";
+    } else {
+      const nextNumber = parseInt(maxInvoiceStr, 10) + 1;
+      nextInvoice = String(nextNumber).padStart(7, "0");
+    }
 
     const result = await transaction
       .request()
@@ -765,7 +783,7 @@ router.post("/ghidulieubienlai", async (req, res) => {
       .input("gioitinh", dulieubienlai.gioiTinh)
       .input("cccd", dulieubienlai.soCccd)
       .input("sodienthoai", dulieubienlai.soDienThoai)
-      .input("nguoithutien", dulieubienlai.tenNhanVienThu)
+      .input("nguoithutien", dulieubienlai.nguoithutien)
       .input("loaihinh", dulieubienlai.maloaihinh)
       .input("sothang", dulieubienlai.soThang)
       .input("tungay", dulieubienlai.tuNgay)
@@ -779,21 +797,26 @@ router.post("/ghidulieubienlai", async (req, res) => {
       .input("maxacnhan", dulieubienlai.maXacNhan)
       .input("tothon", dulieubienlai.tothon)
       .input("tenquanhuyen", dulieubienlai.tenquanhuyen)
-      .input("tentinh", dulieubienlai.tentinh).query(`
+      .input("tentinh", dulieubienlai.tentinh)
+      .input("active", 0)
+      .query(`
                   INSERT INTO bienlaidientu (_id_hskk, sobienlai, ngaybienlai, hoten, masobhxh, ngaysinh, gioitinh, cccd, sodienthoai, nguoithutien, loaihinh, sothang,
-                    tungay, denngay, tuthang, denthang, sotien, madaily, tendaily, hosoIdentity, maxacnhan, tothon, tenquanhuyen, tentinh)
+                    tungay, denngay, tuthang, denthang, sotien, madaily, tendaily, hosoIdentity, maxacnhan, tothon, tenquanhuyen, tentinh, active)
                   VALUES (@_id_hskk, @sobienlai, @ngaybienlai, @hoten, @masobhxh, @ngaysinh, @gioitinh, @cccd, @sodienthoai, @nguoithutien, @loaihinh, @sothang,
-                    @tungay, @denngay, @tuthang, @denthang, @sotien, @madaily, @tendaily, @hosoIdentity, @maxacnhan, @tothon, @tenquanhuyen, @tentinh);
+                    @tungay, @denngay, @tuthang, @denthang, @sotien, @madaily, @tendaily, @hosoIdentity, @maxacnhan, @tothon, @tenquanhuyen, @tentinh, @active);
               `);
 
     // cập nhật số biên lai
     await transaction
       .request()
-      .input("sobienlai", dulieubienlai.sobienlai)
+      .input("sobienlai", nextInvoice)
       .input("ngaykhoitao", dulieubienlai.ngaybienlai)
       .input("namtaichinh", dulieubienlai.currentYear)
-      .input("ghichu", dulieubienlai.hosoIdentity).query(`
-          INSERT INTO bienlai (sobienlai, ngaykhoitao, namtaichinh, ghichu) VALUES (@sobienlai, @ngaykhoitao, @namtaichinh, @ghichu)
+      .input("ghichu", dulieubienlai.maSoBhxh)
+      .input("active", 0)
+      .input("hosoIdentity", dulieubienlai.hosoIdentity).query(`
+          INSERT INTO bienlai (sobienlai, ngaykhoitao, namtaichinh, ghichu, active, hosoIdentity) 
+          VALUES (@sobienlai, @ngaykhoitao, @namtaichinh, @ghichu, @active, @hosoIdentity)
         `);
 
     // Nếu thành công, hoàn thành giao dịch
@@ -817,6 +840,64 @@ router.post("/ghidulieubienlai", async (req, res) => {
     }
   }
 });
+
+router.post("/apply-invoice-status", async (req, res) => {
+  const { _id, hoten, masobhxh, hosoIdentity } = req.body;
+
+  let transaction = null;
+
+  try {
+    await pool.connect();
+
+    transaction = new Transaction(pool);
+    await transaction.begin();
+
+    // Câu 1: cập nhật bảng kekhai
+    const request1 = transaction.request();
+    await request1
+      .input("_id", _id)
+      .query(`UPDATE kekhai SET status_naptien=1 WHERE _id=@_id`);
+
+    // Câu 2: cập nhật bảng bienlaidientu
+    const request2 = transaction.request();
+    await request2
+      .input("hosoIdentity", hosoIdentity)
+      .query(`UPDATE bienlaidientu SET active=1 WHERE hosoIdentity=@hosoIdentity`);
+
+    // Câu 3: cập nhật bảng bienlai
+    const request3 = transaction.request();
+    await request3
+      .input("hosoIdentity", hosoIdentity)
+      .query(`UPDATE bienlai SET active=1 WHERE hosoIdentity=@hosoIdentity`);
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      message: `Cập nhật thành công cho _id: ${_id}`,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
+      },
+    });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    res.status(500).json({
+      success: false,
+      message: `Thất bại cập nhật _id: ${_id}`,
+      error: error.message,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
+      },
+    });
+  } finally {
+    if (pool.connected) await pool.close();
+  }
+});
+
 
 // danh sách kê khai all
 router.get("/all-ds-kekhai", async (req, res) => {
@@ -2247,6 +2328,8 @@ router.get("/sobienlai", async (req, res) => {
         FROM bienlai
         WHERE namtaichinh = @namtaichinh;`);
     const bienlai = result.recordset[0];
+    console.log(bienlai);
+    
     res.json({
       success: true,
       bienlai: bienlai.max,

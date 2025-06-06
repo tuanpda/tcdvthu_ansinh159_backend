@@ -362,15 +362,25 @@ router.get("/find-nguoihuong-masobhxh-theodstg", async (req, res) => {
     const result = await pool
       .request()
       .input("soBhxh", req.query.soBhxh)
-      .query(
-        `SELECT * FROM dstg where soBhxh=@soBhxh and soBhxh<>''`
-      );
+      .query(`SELECT * FROM dstg WHERE soBhxh = @soBhxh AND soBhxh <> ''`);
+
     const nguoihuong = result.recordset;
-    res.json(nguoihuong);
+
+    res.status(200).json({
+      success: nguoihuong.length > 0,
+      message: nguoihuong.length > 0 ? "Tìm thấy người hưởng" : "Không có dữ liệu",
+      data: nguoihuong,
+    });
   } catch (error) {
-    res.status(500).json(error);
+    console.error("Lỗi truy vấn:", error);
+    res.status(200).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 });
+
 
 // tim hạn thẻ người hưởng
 router.get("/find-nguoihuong-masobhxh-theodstg-timhanthe", async (req, res) => {
