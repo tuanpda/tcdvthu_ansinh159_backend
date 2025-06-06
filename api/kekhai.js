@@ -2094,9 +2094,8 @@ router.get("/kykekhai-search-hoso-daguilencong", async (req, res) => {
     // // console.log(ngaykekhaiInput);
 
     // Khởi tạo câu truy vấn cơ bản
-    let query = "SELECT * FROM kekhai WHERE status_naptien=1 and 1=1";
-    let queryCount =
-      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE status_naptien=1 and 1=1";
+    let query = "SELECT * FROM kekhai WHERE 1=1";
+    let queryCount = "SELECT COUNT(*) AS totalCount FROM kekhai WHERE 1=1";
 
     // Thêm các điều kiện tìm kiếm nếu có
     if (kykekhai) {
@@ -2124,6 +2123,7 @@ router.get("/kykekhai-search-hoso-daguilencong", async (req, res) => {
     if (ngaykekhai && !ngaykekhaiden) {
       query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) = @ngaykekhai`;
       queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) = @ngaykekhai`;
+      console.log(query);
     }
 
     if (ngaykekhai && ngaykekhaiden) {
@@ -2241,10 +2241,9 @@ router.get("/kykekhai-search-hoso-diemthu-daguilencong", async (req, res) => {
     // let ngaykekhaidenInput = dayd + "-" + monthd + "-" + yeard;
     // console.log(ngaykekhaiInput);
     // Khởi tạo câu truy vấn cơ bản
-    let query =
-      "SELECT * FROM kekhai WHERE madaily=@madaily and status_naptien=1 and and 1=1";
+    let query = "SELECT * FROM kekhai WHERE madaily=@madaily and 1=1";
     let queryCount =
-      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE madaily=@madaily and status_naptien=1 and and 1=1";
+      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE madaily=@madaily and 1=1";
 
     // Thêm các điều kiện tìm kiếm nếu có
     if (kykekhai) {
@@ -2345,6 +2344,8 @@ router.get("/kykekhai-search-hoso-diemthu-daguilencong", async (req, res) => {
           ? `${req.path}?page=${pageNumber - 1}&limit=${limit}`
           : null,
     };
+
+    // console.log(result.recordset);
 
     res.json({ info, results: result.recordset });
   } catch (error) {
