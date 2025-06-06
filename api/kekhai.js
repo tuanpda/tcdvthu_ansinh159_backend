@@ -17,7 +17,10 @@ const path = require("path");
 
 // var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
 // var folderBienlaidientu = "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
-var folderBienlaidientu = "D:\\";    // test máy tuấn
+// var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
+var folderBienlaidientu =
+  "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+
 var urlServer = "14.224.129.177:1970";
 
 // SET STORAGE
@@ -762,7 +765,7 @@ router.post("/ghidulieubienlai", async (req, res) => {
         WHERE namtaichinh = @namtaichinh;`);
 
     let maxInvoiceStr = resultBienlai.recordset[0].max;
-        // console.log(maxInvoiceStr);
+    // console.log(maxInvoiceStr);
     let nextInvoice = "";
 
     if (!maxInvoiceStr) {
@@ -798,8 +801,7 @@ router.post("/ghidulieubienlai", async (req, res) => {
       .input("tothon", dulieubienlai.tothon)
       .input("tenquanhuyen", dulieubienlai.tenquanhuyen)
       .input("tentinh", dulieubienlai.tentinh)
-      .input("active", 0)
-      .query(`
+      .input("active", 0).query(`
                   INSERT INTO bienlaidientu (_id_hskk, sobienlai, ngaybienlai, hoten, masobhxh, ngaysinh, gioitinh, cccd, sodienthoai, nguoithutien, loaihinh, sothang,
                     tungay, denngay, tuthang, denthang, sotien, madaily, tendaily, hosoIdentity, maxacnhan, tothon, tenquanhuyen, tentinh, active)
                   VALUES (@_id_hskk, @sobienlai, @ngaybienlai, @hoten, @masobhxh, @ngaysinh, @gioitinh, @cccd, @sodienthoai, @nguoithutien, @loaihinh, @sothang,
@@ -841,6 +843,7 @@ router.post("/ghidulieubienlai", async (req, res) => {
   }
 });
 
+// xác nhận phê duyệt hồ sơ
 router.post("/apply-invoice-status", async (req, res) => {
   const { _id, hoten, masobhxh, hosoIdentity } = req.body;
 
@@ -862,7 +865,9 @@ router.post("/apply-invoice-status", async (req, res) => {
     const request2 = transaction.request();
     await request2
       .input("hosoIdentity", hosoIdentity)
-      .query(`UPDATE bienlaidientu SET active=1 WHERE hosoIdentity=@hosoIdentity`);
+      .query(
+        `UPDATE bienlaidientu SET active=1 WHERE hosoIdentity=@hosoIdentity`
+      );
 
     // Câu 3: cập nhật bảng bienlai
     const request3 = transaction.request();
@@ -898,6 +903,51 @@ router.post("/apply-invoice-status", async (req, res) => {
   }
 });
 
+// xác nhận huỷ duyệt hồ sơ
+router.post("/cancel-invoice-status", async (req, res) => {
+  const { _id, hoten, masobhxh, hosoIdentity } = req.body;
+
+  let transaction = null;
+
+  try {
+    await pool.connect();
+
+    transaction = new Transaction(pool);
+    await transaction.begin();
+
+    // Câu 1: cập nhật bảng kekhai
+    const request = transaction.request();
+    await request
+      .input("_id", _id)
+      .query(`UPDATE kekhai SET trangthai=1 WHERE _id=@_id`);
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      message: `Cập nhật thành công cho _id: ${_id}`,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
+      },
+    });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    res.status(500).json({
+      success: false,
+      message: `Thất bại cập nhật _id: ${_id}`,
+      error: error.message,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
+      },
+    });
+  } finally {
+    if (pool.connected) await pool.close();
+  }
+});
 
 // danh sách kê khai all
 router.get("/all-ds-kekhai", async (req, res) => {
@@ -1784,7 +1834,7 @@ router.get("/kykekhai-search-hoso", async (req, res) => {
       queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) = @ngaykekhai`;
     }
 
-    if (ngaykekhai && ngaykekhaiden) {      
+    if (ngaykekhai && ngaykekhaiden) {
       query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
       queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
     }
@@ -2043,8 +2093,9 @@ router.get("/kykekhai-search-hoso-daguilencong", async (req, res) => {
     // // console.log(ngaykekhaiInput);
 
     // Khởi tạo câu truy vấn cơ bản
-    let query = "SELECT * FROM kekhai WHERE trangthai=0 and status_hosoloi=0 and 1=1";
-    let queryCount = "SELECT COUNT(*) AS totalCount FROM kekhai WHERE trangthai=0 and status_hosoloi=0 and 1=1";
+    let query = "SELECT * FROM kekhai WHERE status_naptien=1 and 1=1";
+    let queryCount =
+      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE status_naptien=1 and 1=1";
 
     // Thêm các điều kiện tìm kiếm nếu có
     if (kykekhai) {
@@ -2074,7 +2125,7 @@ router.get("/kykekhai-search-hoso-daguilencong", async (req, res) => {
       queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) = @ngaykekhai`;
     }
 
-    if (ngaykekhai && ngaykekhaiden) {      
+    if (ngaykekhai && ngaykekhaiden) {
       query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
       queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
     }
@@ -2189,9 +2240,10 @@ router.get("/kykekhai-search-hoso-diemthu-daguilencong", async (req, res) => {
     // let ngaykekhaidenInput = dayd + "-" + monthd + "-" + yeard;
     // console.log(ngaykekhaiInput);
     // Khởi tạo câu truy vấn cơ bản
-    let query = "SELECT * FROM kekhai WHERE trangthai=0 and status_hosoloi=0 and madaily=@madaily and 1=1";
+    let query =
+      "SELECT * FROM kekhai WHERE madaily=@madaily and status_naptien=1 and and 1=1";
     let queryCount =
-      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE trangthai=0 and status_hosoloi=0 and madaily=@madaily and 1=1";
+      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE madaily=@madaily and status_naptien=1 and and 1=1";
 
     // Thêm các điều kiện tìm kiếm nếu có
     if (kykekhai) {
@@ -2329,7 +2381,7 @@ router.get("/sobienlai", async (req, res) => {
         WHERE namtaichinh = @namtaichinh;`);
     const bienlai = result.recordset[0];
     console.log(bienlai);
-    
+
     res.json({
       success: true,
       bienlai: bienlai.max,
@@ -2467,7 +2519,9 @@ router.get("/hosochuadaylencongbhvn", async (req, res) => {
     await pool.connect();
     const result = await pool
       .request()
-      .query(`select * from kekhai where trangthai = 1 and status_hosoloi=0 order by _id desc`);
+      .query(
+        `select * from kekhai where trangthai = 1 and status_hosoloi=0 order by _id desc`
+      );
     const hs = result.recordset;
     res.json({
       success: true,
@@ -2569,9 +2623,7 @@ router.post("/allsonguoidakekhai-diemthu", async (req, res) => {
     const result = await pool
       .request()
       .input("madaily", req.body.madaily)
-      .query(
-        `select * from kekhai where madaily=@madaily order by _id desc`
-      );
+      .query(`select * from kekhai where madaily=@madaily order by _id desc`);
     const hs = result.recordset;
     res.json({
       success: true,
@@ -2589,9 +2641,7 @@ router.get("/view-item-bienlai", async (req, res) => {
     const result = await pool
       .request()
       .input("hosoIdentity", req.query.hosoIdentity)
-      .query(
-        `select * from bienlaidientu where hosoIdentity=@hosoIdentity`
-      );
+      .query(`select * from bienlaidientu where hosoIdentity=@hosoIdentity`);
     const hs = result.recordset[0];
     res.json({
       success: true,
@@ -2601,8 +2651,6 @@ router.get("/view-item-bienlai", async (req, res) => {
     res.status(500).json(error);
   }
 });
-
-
 
 router.post("/thongke-hosokekhai", async (req, res) => {
   // console.log(req.body);
@@ -2711,14 +2759,13 @@ router.get("/baocao-loaihinh-kekhai-theo-thang-nam", async (req, res) => {
 
 // chart mã loại kê khai theo tháng và năm (lọc theo cả năm và tháng) theo đại lý
 router.get("/baocao-loaihinh-kekhai-theo-thang-nam-daily", async (req, res) => {
-  
   try {
     await pool.connect();
     const request = pool.request();
 
     const nam = parseInt(req.query.nam);
     const thang = parseInt(req.query.thang);
-    const madaily = req.query.madaily
+    const madaily = req.query.madaily;
 
     const query = `
       SELECT 
@@ -2818,23 +2865,15 @@ router.get("/baocao-tongtien-daily-theo-thang-nam", async (req, res) => {
   }
 });
 
-
-
-
 // tra cứu biên lai điện tử cho cán bộ BHXH
 router.get("/search-bienlai-dientu-bhxh", async (req, res) => {
   // console.log(req.query);
-  
+
   try {
     await pool.connect();
 
-    const {
-      loaihinh,
-      ngaybienlaitu,
-      ngaybienlaiden,
-      masobhxh,
-      hoten,
-    } = req.query;
+    const { loaihinh, ngaybienlaitu, ngaybienlaiden, masobhxh, hoten } =
+      req.query;
 
     // Mảng chứa điều kiện lọc
     const conditions = [];
@@ -2846,15 +2885,18 @@ router.get("/search-bienlai-dientu-bhxh", async (req, res) => {
     }
 
     if (ngaybienlaitu) {
-      conditions.push("CONVERT(date, TRY_CONVERT(datetime, ngaybienlai, 105)) >= @ngaybienlaitu");
+      conditions.push(
+        "CONVERT(date, TRY_CONVERT(datetime, ngaybienlai, 105)) >= @ngaybienlaitu"
+      );
       request.input("ngaybienlaitu", ngaybienlaitu);
     }
 
     if (ngaybienlaiden) {
-      conditions.push("CONVERT(date, TRY_CONVERT(datetime, ngaybienlai, 105)) <= @ngaybienlaiden");
+      conditions.push(
+        "CONVERT(date, TRY_CONVERT(datetime, ngaybienlai, 105)) <= @ngaybienlaiden"
+      );
       request.input("ngaybienlaiden", ngaybienlaiden);
     }
-
 
     if (masobhxh) {
       conditions.push("masobhxh LIKE '%' + @masobhxh + '%'");
@@ -2867,7 +2909,8 @@ router.get("/search-bienlai-dientu-bhxh", async (req, res) => {
     }
 
     // Gộp điều kiện thành chuỗi WHERE
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const query = `
       SELECT * FROM bienlaidientu
@@ -2883,14 +2926,16 @@ router.get("/search-bienlai-dientu-bhxh", async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi truy vấn:", error);
-    res.status(500).json({ success: false, message: "Lỗi truy vấn dữ liệu", error });
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi truy vấn dữ liệu", error });
   }
 });
 
 // API tìm kiếm dữ liệu từ bảng dulieuthe
 router.get("/tim-dulieuthe", async (req, res) => {
   // console.log(req.query);
-  
+
   const { hoTen, soSoBhxh } = req.query;
 
   // Nếu cả hai đều rỗng thì trả về danh sách rỗng
@@ -2935,10 +2980,5 @@ router.get("/tim-dulieuthe", async (req, res) => {
     });
   }
 });
-
-
-
-
-
 
 module.exports = router;
