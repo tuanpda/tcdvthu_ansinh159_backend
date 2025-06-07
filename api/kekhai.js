@@ -19,10 +19,10 @@ const num2words = require("num2words");
 
 // var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
 var folderBienlaidientu =
-  // "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
-  // var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
-  // var folderBienlaidientu =
-  "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+  "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
+// var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
+// var folderBienlaidientu =
+// "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
 
 var urlServer = "14.224.129.177:1970";
 
