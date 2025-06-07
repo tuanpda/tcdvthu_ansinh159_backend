@@ -14,13 +14,15 @@ const {
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const PDFDocument = require("pdfkit");
+const num2words = require("num2words");
 
 // var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
 var folderBienlaidientu =
-  "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
-// var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
-// var folderBienlaidientu =
-// "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+  // "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
+  // var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
+  // var folderBienlaidientu =
+  "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
 
 var urlServer = "14.224.129.177:1970";
 
@@ -39,6 +41,89 @@ var storage = multer.diskStorage({
 });
 
 var upload = multer({ storage: storage });
+
+router.post("/tao-bienlai", async (req, res) => {
+  try {
+    const data = req.body;
+    console.log("Nhận dữ liệu:", data);
+
+    // Khởi tạo PDF
+    const doc = new PDFDocument({
+      size: "A5",
+      layout: "landscape",
+      margin: 10,
+    });
+
+    const filename = `${data.urlNameInvoice}.pdf`;
+    const outputPath = path.join(folderBienlaidientu, filename);
+
+    // Tạo stream ghi file
+    const writeStream = fs.createWriteStream(outputPath);
+    doc.pipe(writeStream);
+
+    // === Nội dung PDF
+    doc.fontSize(20).fillColor("#dc143c").text("BIÊN LAI THU TIỀN", {
+      align: "center",
+    });
+
+    const year = data.ngaybienlai?.split("-")[2]?.split(" ")[0] || "";
+    const sobienlai = data.sobienlai || "___";
+
+    doc.fontSize(10).fillColor("black");
+    doc.text(`Số: ${sobienlai}`, { align: "right" });
+    doc.text(`Ngày: ${data.ngaybienlai}`, { align: "right" });
+
+    doc.moveDown();
+    doc.text(`Họ tên: ${data.hoTen}`);
+    doc.text(`Mã số BHXH: ${data.maSoBhxh}`);
+    doc.text(`Địa chỉ: ${data.tenquanhuyen}, ${data.tentinh}`);
+
+    const noidung =
+      data.maloaihinh === "AR" || data.maloaihinh === "BI"
+        ? `Tiền đóng BHYT, phương thức ${data.soThang} tháng, từ ${data.tuNgay} đến ${data.denNgay}`
+        : `Đóng tiền tham gia BHXH Tự nguyện`;
+
+    doc.text(`Nội dung: ${noidung}`);
+
+    const sotien = Number(data.soTien).toLocaleString("vi-VN");
+    doc.text(`Số tiền: ${sotien} VNĐ`);
+
+    const tienChu = num2words(data.soTien, { lang: "vi" });
+    doc.text(
+      `Bằng chữ: ${tienChu.charAt(0).toUpperCase() + tienChu.slice(1)} đồng`
+    );
+
+    doc.moveDown(2);
+    doc.text("Người nộp tiền", 100, doc.y, { align: "left" });
+    doc.text("Người thu tiền", 350, doc.y, { align: "right" });
+    doc.text(`${data.hoTen}`, 100, doc.y + 20, { align: "left" });
+    doc.text(`${data.tennguoitao || "Người thu"}`, 350, doc.y + 20, {
+      align: "right",
+    });
+
+    // Kết thúc tài liệu
+    doc.end();
+
+    // ✅ Gửi phản hồi sau khi ghi xong
+    writeStream.on("finish", () => {
+      return res.json({
+        success: true,
+        fileUrl: `/static/bienlaidientu/${filename}`, // frontend cần ánh xạ đúng
+      });
+    });
+
+    // ❌ Bắt lỗi ghi file nếu có
+    writeStream.on("error", (err) => {
+      console.error("Lỗi khi ghi file PDF:", err);
+      return res
+        .status(500)
+        .json({ success: false, message: "Lỗi ghi file PDF" });
+    });
+  } catch (err) {
+    console.error("Lỗi xử lý tạo biên lai:", err);
+    res.status(500).json({ success: false, message: "Lỗi tạo biên lai" });
+  }
+});
 
 router.post("/upload-bienlai", upload.single("pdf"), (req, res) => {
   if (!req.file) {
@@ -1922,7 +2007,7 @@ router.get("/kykekhai-search-hoso", async (req, res) => {
 
 // tìm kiếm hồ sơ đối với điểm thu
 router.get("/kykekhai-search-hoso-diemthu", async (req, res) => {
-  console.log(req.query);
+  // console.log(req.query);
 
   try {
     const {
@@ -2095,8 +2180,10 @@ router.get("/kykekhai-search-hoso-daguilencong", async (req, res) => {
     // // console.log(ngaykekhaiInput);
 
     // Khởi tạo câu truy vấn cơ bản
-    let query = "SELECT * FROM kekhai WHERE 1=1";
-    let queryCount = "SELECT COUNT(*) AS totalCount FROM kekhai WHERE 1=1";
+    let query =
+      "SELECT * FROM kekhai WHERE status_naptien=1 and trangthai=0 and 1=1";
+    let queryCount =
+      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE status_naptien=1 and trangthai=0 and 1=1";
 
     // Thêm các điều kiện tìm kiếm nếu có
     if (kykekhai) {
@@ -2242,9 +2329,10 @@ router.get("/kykekhai-search-hoso-diemthu-daguilencong", async (req, res) => {
     // let ngaykekhaidenInput = dayd + "-" + monthd + "-" + yeard;
     // console.log(ngaykekhaiInput);
     // Khởi tạo câu truy vấn cơ bản
-    let query = "SELECT * FROM kekhai WHERE madaily=@madaily and 1=1";
+    let query =
+      "SELECT * FROM kekhai WHERE madaily=@madaily and status_naptien=1 and trangthai=0 and 1=1";
     let queryCount =
-      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE madaily=@madaily and 1=1";
+      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE madaily=@madaily and status_naptien=1 and trangthai=0 and 1=1";
 
     // Thêm các điều kiện tìm kiếm nếu có
     if (kykekhai) {
@@ -2483,7 +2571,7 @@ router.post("/hosoloitrave-diemthu", async (req, res) => {
       .request()
       .input("madaily", req.body.madaily)
       .query(
-        `select * from kekhai where status_hosoloi = 1 and madaily=@madaily order by _id desc`
+        `select * from kekhai where trangthai = 1 and madaily=@madaily order by _id desc`
       );
     const hs = result.recordset;
     res.json({
@@ -2503,7 +2591,7 @@ router.get("/hosoloitrave-tonghop", async (req, res) => {
     await pool.connect();
     const result = await pool
       .request()
-      .query(`select * from kekhai where status_hosoloi = 1 order by _id desc`);
+      .query(`select * from kekhai where trangthai = 1 order by _id desc`);
     const hs = result.recordset;
     res.json({
       success: true,
@@ -2523,7 +2611,7 @@ router.get("/hosochuadaylencongbhvn", async (req, res) => {
     const result = await pool
       .request()
       .query(
-        `select * from kekhai where trangthai = 1 and status_hosoloi=0 order by _id desc`
+        `select * from kekhai where trangthai = 0 and status_naptien=0 order by _id desc`
       );
     const hs = result.recordset;
     res.json({
@@ -2545,7 +2633,7 @@ router.post("/hosochuadaylencongbhvn-diemthu", async (req, res) => {
       .request()
       .input("madaily", req.body.madaily)
       .query(
-        `select * from kekhai where trangthai = 1 and status_hosoloi=0 and madaily=@madaily order by _id desc`
+        `select * from kekhai where trangthai = 0 and status_naptien=0 and madaily=@madaily order by _id desc`
       );
     const hs = result.recordset;
     res.json({
@@ -2565,7 +2653,9 @@ router.get("/hosodadaylencongbhvn", async (req, res) => {
     await pool.connect();
     const result = await pool
       .request()
-      .query(`select * from kekhai where trangthai = 0 order by _id desc`);
+      .query(
+        `select * from kekhai where trangthai = 0 and status_naptien=1 order by _id desc`
+      );
     const hs = result.recordset;
     res.json({
       success: true,
@@ -2586,7 +2676,7 @@ router.post("/hosodadaylencongbhvn-diemthu", async (req, res) => {
       .request()
       .input("madaily", req.body.madaily)
       .query(
-        `select * from kekhai where trangthai = 0 and madaily=@madaily order by _id desc`
+        `select * from kekhai where trangthai = 0 and status_naptien=1 and madaily=@madaily order by _id desc`
       );
     const hs = result.recordset;
     res.json({
@@ -2671,9 +2761,10 @@ router.post("/thongke-hosokekhai", async (req, res) => {
     const query = `
       SELECT 
           COUNT(*) AS tong_hoso,
-          COALESCE(SUM(CASE WHEN status_hosoloi = 1 THEN 1 ELSE 0 END), 0) AS hoso_loi,
-          COALESCE(SUM(CASE WHEN trangthai = 0 THEN 1 ELSE 0 END), 0) AS hoso_dagui,
-          COALESCE(SUM(CASE WHEN trangthai = 1 AND status_hosoloi = 0 THEN 1 ELSE 0 END), 0) AS hoso_chuagui,
+          COALESCE(SUM(CASE WHEN trangthai = 1 THEN 1 ELSE 0 END), 0) AS hoso_loi,
+          COALESCE(SUM(CASE WHEN status_naptien = 1 THEN 1 ELSE 0 END), 0) AS hoso_dagui,
+          COALESCE(SUM(CASE WHEN status_naptien = 0 AND trangthai = 1 THEN 1 ELSE 0 END), 0) AS hoso_chuaduyet,
+          COALESCE(SUM(CASE WHEN trangthai = 0 AND status_naptien=0 THEN 1 ELSE 0 END), 0) AS hoso_chuagui,
           COUNT(DISTINCT sohoso) AS tong_sohoso,
           COALESCE(SUM(CAST(sotien AS FLOAT)), 0) AS tong_sotien,
           COALESCE(SUM(CASE WHEN maloaihinh = 'AR' THEN 1 ELSE 0 END), 0) AS tong_AR,
@@ -2704,9 +2795,10 @@ router.get("/thongke-hosokekhai-tonghop", async (req, res) => {
     const query = `
       SELECT 
           COUNT(*) AS tong_hoso,
-          COALESCE(SUM(CASE WHEN status_hosoloi = 1 THEN 1 ELSE 0 END), 0) AS hoso_loi,
-          COALESCE(SUM(CASE WHEN trangthai = 0 THEN 1 ELSE 0 END), 0) AS hoso_dagui,
-          COALESCE(SUM(CASE WHEN trangthai = 1 AND status_hosoloi = 0 THEN 1 ELSE 0 END), 0) AS hoso_chuagui,
+          COALESCE(SUM(CASE WHEN trangthai = 1 THEN 1 ELSE 0 END), 0) AS hoso_loi,
+          COALESCE(SUM(CASE WHEN status_naptien = 1 THEN 1 ELSE 0 END), 0) AS hoso_dagui,
+          COALESCE(SUM(CASE WHEN status_naptien = 0 AND trangthai = 1 THEN 1 ELSE 0 END), 0) AS hoso_chuaduyet,
+          COALESCE(SUM(CASE WHEN trangthai = 0 AND status_naptien=0 THEN 1 ELSE 0 END), 0) AS hoso_chuagui,
           COUNT(DISTINCT sohoso) AS tong_sohoso,
           COALESCE(SUM(CAST(sotien AS FLOAT)), 0) AS tong_sotien,
           COALESCE(SUM(CASE WHEN maloaihinh = 'AR' THEN 1 ELSE 0 END), 0) AS tong_AR,

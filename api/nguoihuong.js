@@ -355,20 +355,26 @@ router.get("/find-nguoihuong-cccd", async (req, res) => {
   }
 });
 
-// tim nguoi huong theo ma so bhxh
-router.get("/find-nguoihuong-masobhxh-theodstg", async (req, res) => {
+// tim nguoi huong theo ma so bhxh trong dữ liệu tự nguyện
+router.get("/find-nguoihuong-masobhxh-theodulieutunguyen", async (req, res) => {
+  // console.log(req.query);
+
   try {
     await pool.connect();
     const result = await pool
       .request()
       .input("soBhxh", req.query.soBhxh)
-      .query(`SELECT * FROM dstg WHERE soBhxh = @soBhxh AND soBhxh <> ''`);
+      .query(
+        `SELECT * FROM dulieutunguyen WHERE soBhxh = @soBhxh AND soBhxh <> ''`
+      );
 
     const nguoihuong = result.recordset;
+    // console.log(result.recordset);
 
     res.status(200).json({
       success: nguoihuong.length > 0,
-      message: nguoihuong.length > 0 ? "Tìm thấy người hưởng" : "Không có dữ liệu",
+      message:
+        nguoihuong.length > 0 ? "Tìm thấy người hưởng" : "Không có dữ liệu",
       data: nguoihuong,
     });
   } catch (error) {
@@ -381,6 +387,35 @@ router.get("/find-nguoihuong-masobhxh-theodstg", async (req, res) => {
   }
 });
 
+// tim nguoi huong theo ma so bhxh trong dữ liệu tham gia
+router.get("/find-nguoihuong-masobhxh-theodstg", async (req, res) => {
+  // console.log(req.query);
+
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input("soBhxh", req.query.soBhxh)
+      .query(`SELECT * FROM dstg WHERE soBhxh = @soBhxh AND soBhxh <> ''`);
+
+    const nguoihuong = result.recordset;
+    // console.log(result.recordset);
+
+    res.status(200).json({
+      success: nguoihuong.length > 0,
+      message:
+        nguoihuong.length > 0 ? "Tìm thấy người hưởng" : "Không có dữ liệu",
+      data: nguoihuong,
+    });
+  } catch (error) {
+    console.error("Lỗi truy vấn:", error);
+    res.status(200).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+});
 
 // tim hạn thẻ người hưởng
 router.get("/find-nguoihuong-masobhxh-theodstg-timhanthe", async (req, res) => {
@@ -413,7 +448,6 @@ router.get("/find-nguoihuong-cccd-theodstg", async (req, res) => {
     res.status(500).json(error);
   }
 });
-
 
 // tìm tên tỉnh theo mã tỉnh
 router.get("/find-tentinh", async (req, res) => {
