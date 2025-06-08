@@ -8,9 +8,33 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 
+let checkDB = process.env.SQL_DATABASE;
+let folderAvatar = "";
+let urlServer = "";
+
+if (checkDB === "tcdvthu_ansinh159") {
+  // var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
+  folderAvatar =
+    "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\avatar";
+  // var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
+  // var folderBienlaidientu =
+  // "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+  urlServer = "14.224.129.177:1970";
+} else {
+  folderAvatar =
+    "E:\\CODE_APP\\TCDVTHU\\ANSINH68\\tcdvthu_ansinh68_client\\static\\avatar";
+  urlServer = "14.224.129.177:1973";
+}
+
+// console.log("=====================");
+// console.log("Bạn đang sử dụng cơ sở dữ liệu: " + checkDB);
+// console.log("Thư mục biên lai: " + folderAvatar);
+// console.log("URL máy chủ: " + urlServer);
+// console.log("=====================");
+
 // var folderAvatar = "/home/thuan/tcdvthu_client/static/avatar";
-var folderAvatar = "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\avatar";
-var urlServer = "14.224.129.177:1970";
+// var folderAvatar = "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\avatar";
+// var urlServer = "14.224.129.177:1970";
 
 // SET STORAGE
 var storage = multer.diskStorage({
@@ -454,92 +478,101 @@ router.post("/account", upload.single("avatar"), async (req, res) => {
 });
 
 // tạo user tra cứu biên lai điện tử bhxh
-router.post("/account-tracuubienlaidientu-bhxh", upload.single("avatar"), async (req, res) => {
-  // console.log(req.body);
-  var password = req.body.password;
-  const encryptedPassword = await bcrypt.hash(password, 10);
+router.post(
+  "/account-tracuubienlaidientu-bhxh",
+  upload.single("avatar"),
+  async (req, res) => {
+    // console.log(req.body);
+    var password = req.body.password;
+    const encryptedPassword = await bcrypt.hash(password, 10);
 
-  let linkAvatar;
-  const file = req.file;
-  if (!file) {
-    linkAvatar = req.body.avatar;
-  } else {
-    // Đổi đường dẫn khi deploy lên máy chủ
-    linkAvatar = `http://${urlServer}/avatar/${req.file.filename}`;
-  }
-  try {
-    await pool.connect();
-    const result = await pool
-      .request()
-      .input("masobhxh", req.body.masobhxh)
-      .input("name", req.body.name)
-      .input("password", encryptedPassword)
-      .input("email", req.body.email)
-      .input("donvi", req.body.donvi)
-      .input("sodienthoai", req.body.sodienthoai)
-      .input("cccd", req.body.cccd)
-      .input("avatar", linkAvatar)
-      .input("active", req.body.active)
-      .input("createdBy", req.body.createdBy)
-      .input("createdAt", req.body.createdAt).query(`
+    let linkAvatar;
+    const file = req.file;
+    if (!file) {
+      linkAvatar = req.body.avatar;
+    } else {
+      // Đổi đường dẫn khi deploy lên máy chủ
+      linkAvatar = `http://${urlServer}/avatar/${req.file.filename}`;
+    }
+    try {
+      await pool.connect();
+      const result = await pool
+        .request()
+        .input("masobhxh", req.body.masobhxh)
+        .input("name", req.body.name)
+        .input("password", encryptedPassword)
+        .input("email", req.body.email)
+        .input("donvi", req.body.donvi)
+        .input("sodienthoai", req.body.sodienthoai)
+        .input("cccd", req.body.cccd)
+        .input("avatar", linkAvatar)
+        .input("active", req.body.active)
+        .input("createdBy", req.body.createdBy)
+        .input("createdAt", req.body.createdAt).query(`
                 INSERT INTO users_tracuu_bienlai_bhxh (masobhxh, name, password, email, donvi, sodienthoai, cccd,
                 avatar, active, createdBy, createdAt) 
                 VALUES (@masobhxh, @name, @password, @email, @donvi, @sodienthoai, @cccd,
                 @avatar, @active, @createdBy, @createdAt);
             `);
-    const user = req.body;
-    res.json({ user, message: "Create user success!", success: true });
-  } catch (error) {
-    console.error("Lỗi tạo user:", error);
-    return res.status(500).json({ success: false, message: "Lỗi khi tạo user", error });
+      const user = req.body;
+      res.json({ user, message: "Create user success!", success: true });
+    } catch (error) {
+      console.error("Lỗi tạo user:", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Lỗi khi tạo user", error });
+    }
   }
-});
+);
 
 // cập nhật thông tin user tra cứu biên lai
-router.post("/user/fix-tracuu-bienlaidientu", upload.single("avatar"), async (req, res) => {
-  let linkAvatar;
-  // console.log(req.body);
-  if (!req.file) {
-    linkAvatar = req.body.avatar;
-  } else {
-    // xóa file ảnh cũ
-    const basePath = folderAvatar;
-    // "D:\\PROJECT\\TCDVTHU\\client\\static\\avatar"; // đổi đường dẫn khi up lên máy chủ
-    const fileName = path.basename(req.body.avatarOld);
-    // console.log(fileName);
-    // Ghép đường dẫn và tên tệp bằng phương thức path.join()
-    const filePath = path.join(basePath, fileName);
-    // console.log(filePath);
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error("error", err);
-        return;
-      }
-    });
-    linkAvatar = `http://${urlServer}/avatar/${req.file.filename}`;
-  }
-  try {
-    await pool.connect();
-    const result = await pool
-      .request()
-      .input("_id", req.body._id)
-      .query(`SELECT * FROM users_tracuu_bienlai_bhxh WHERE _id = @_id`);
-    let user = result.recordset[0];
-    // console.log(user);
-    if (user) {
-      await pool
+router.post(
+  "/user/fix-tracuu-bienlaidientu",
+  upload.single("avatar"),
+  async (req, res) => {
+    let linkAvatar;
+    // console.log(req.body);
+    if (!req.file) {
+      linkAvatar = req.body.avatar;
+    } else {
+      // xóa file ảnh cũ
+      const basePath = folderAvatar;
+      // "D:\\PROJECT\\TCDVTHU\\client\\static\\avatar"; // đổi đường dẫn khi up lên máy chủ
+      const fileName = path.basename(req.body.avatarOld);
+      // console.log(fileName);
+      // Ghép đường dẫn và tên tệp bằng phương thức path.join()
+      const filePath = path.join(basePath, fileName);
+      // console.log(filePath);
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error("error", err);
+          return;
+        }
+      });
+      linkAvatar = `http://${urlServer}/avatar/${req.file.filename}`;
+    }
+    try {
+      await pool.connect();
+      const result = await pool
         .request()
         .input("_id", req.body._id)
-        .input("cccd", req.body.cccd)
-        .input("sodienthoai", req.body.sodienthoai)
-        .input("masobhxh", req.body.masobhxh)
-        .input("email", req.body.email)
-        .input("name", req.body.name)
-        .input("avatar", linkAvatar)
-        .input("active", req.body.active)
-        .input("donvi", req.body.donvi)
-        .query(
-          `UPDATE users_tracuu_bienlai_bhxh SET 
+        .query(`SELECT * FROM users_tracuu_bienlai_bhxh WHERE _id = @_id`);
+      let user = result.recordset[0];
+      // console.log(user);
+      if (user) {
+        await pool
+          .request()
+          .input("_id", req.body._id)
+          .input("cccd", req.body.cccd)
+          .input("sodienthoai", req.body.sodienthoai)
+          .input("masobhxh", req.body.masobhxh)
+          .input("email", req.body.email)
+          .input("name", req.body.name)
+          .input("avatar", linkAvatar)
+          .input("active", req.body.active)
+          .input("donvi", req.body.donvi)
+          .query(
+            `UPDATE users_tracuu_bienlai_bhxh SET 
               cccd = @cccd,
               sodienthoai = @sodienthoai,
               masobhxh = @masobhxh,
@@ -549,16 +582,17 @@ router.post("/user/fix-tracuu-bienlaidientu", upload.single("avatar"), async (re
               active = @active,
               donvi = @donvi
           WHERE _id = @_id;`
-        );
-      res.json({
-        success: true,
-        message: "Update success !",
-      });
+          );
+        res.json({
+          success: true,
+          message: "Update success !",
+        });
+      }
+    } catch (error) {
+      res.status(500).json(error);
     }
-  } catch (error) {
-    res.status(500).json(error);
   }
-});
+);
 
 // import user
 router.post("/import-uses", async (req, res) => {

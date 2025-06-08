@@ -13,10 +13,7 @@ dotenv.config();
 app.use(cookieParser());
 
 // app.use(cors());
-const allowedOrigins = [
-  "http://localhost:1970",
-  "http://14.224.129.177:1970",
-];
+const allowedOrigins = ["http://localhost:1970", "http://14.224.129.177:1970"];
 
 app.use(
   cors({
@@ -31,12 +28,11 @@ app.use(
   })
 );
 
-// app.use(
-//   cors({
-//     origin: "http://localhost:4042", // hoặc IP thật nếu deploy
-//     credentials: true, // Cho phép gửi cookie từ frontend
-//   })
-// );
+// Tạo đường dẫn tuyệt đối tới thư mục static (nơi chứa PDF)
+const staticFolderPath = path.join(__dirname, "static");
+
+// Cho phép truy cập file trong static thông qua URL: /static/...
+app.use("/static", express.static(staticFolderPath));
 
 app.use(morgan("dev"));
 app.use(bodyParse.urlencoded({ extended: false }));
@@ -71,7 +67,7 @@ app.use("/api/nguoihuong", require("./api/nguoihuong"));
 app.use("/api/org/kekhai_2902141757", require("./api/org/kekhai_2902141757"));
 
 app.listen(process.env.PORT, () => {
-  const port = process.env.PORT
+  const port = process.env.PORT;
 
   console.log(`Server running at http://localhost:${port}`);
 });

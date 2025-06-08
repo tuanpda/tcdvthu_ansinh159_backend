@@ -8,7 +8,7 @@ const {
   Float,
   Transaction,
   Bit,
-  Date,
+  Date: SqlDate,
   DateTime,
 } = require("mssql");
 const multer = require("multer");
@@ -17,14 +17,34 @@ const path = require("path");
 const PDFDocument = require("pdfkit");
 const num2words = require("num2words");
 
-// var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
-var folderBienlaidientu =
-  "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
-// var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
-// var folderBienlaidientu =
-// "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+// console.log(process.env.SQL_DATABASE);
 
-var urlServer = "14.224.129.177:1970";
+let checkDB = process.env.SQL_DATABASE;
+let thumucbienlai = "";
+let urlServer = "";
+let urlServerBackend;
+if (checkDB === "tcdvthu_ansinh159") {
+  // var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
+  thumucbienlai =
+    "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
+  // var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
+  // var folderBienlaidientu =
+  // "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+  urlServer = "14.224.129.177:1970";
+  urlServerBackend = "14.224.129.177:4213"; // máy chủ tuấn pda
+} else {
+  thumucbienlai =
+    "E:\\CODE_APP\\TCDVTHU\\ANSINH68\\tcdvthu_ansinh68_client\\static\\bienlaidientu";
+  urlServer = "14.224.129.177:1973";
+  urlServerBackend = "14.224.129.177:4209"; // máy chủ tuấn pda
+}
+
+// console.log("=====================");
+// console.log("Bạn đang sử dụng cơ sở dữ liệu: " + checkDB);
+// console.log("Thư mục biên lai: " + thumucbienlai);
+// console.log("URL máy chủ: " + urlServer);
+// console.log("URL máy chủ backend: " + urlServerBackend);
+// console.log("=====================");
 
 // SET STORAGE
 var storage = multer.diskStorage({
@@ -33,7 +53,7 @@ var storage = multer.diskStorage({
     // đường dẫn cho máy dev MacOS
     // cb(null, "/Users/apple/Documents/code/p_Tcdvthu/tcdvthu_client/static/");
     // đường dẫn khi deploy máy chủ PHỦ DIỄN
-    cb(null, folderBienlaidientu);
+    cb(null, thumucbienlai);
   },
   filename: function (req, file, cb) {
     cb(null, file.originalname);
@@ -42,86 +62,62 @@ var storage = multer.diskStorage({
 
 var upload = multer({ storage: storage });
 
-router.post("/tao-bienlai", async (req, res) => {
+// ✅ Tạo đường dẫn đúng tuyệt đối đến thư mục `static/bienlaidientu`
+const folderBienlaidientu = path.join(
+  __dirname,
+  "..",
+  "static",
+  "bienlaidientu"
+);
+
+// ✅ Nếu thư mục chưa tồn tại thì tạo nó
+if (!fs.existsSync(folderBienlaidientu)) {
+  fs.mkdirSync(folderBienlaidientu, { recursive: true });
+}
+
+router.post("/tao-bienlai-demo", async (req, res) => {
   try {
-    const data = req.body;
-    console.log("Nhận dữ liệu:", data);
+    const filename = `demo-${Date.now()}.pdf`;
+    const filePath = path.join(folderBienlaidientu, filename);
 
-    // Khởi tạo PDF
-    const doc = new PDFDocument({
-      size: "A5",
-      layout: "landscape",
-      margin: 10,
-    });
+    const doc = new PDFDocument();
+    const stream = fs.createWriteStream(filePath);
+    doc.pipe(stream);
 
-    const filename = `${data.urlNameInvoice}.pdf`;
-    const outputPath = path.join(folderBienlaidientu, filename);
-
-    // Tạo stream ghi file
-    const writeStream = fs.createWriteStream(outputPath);
-    doc.pipe(writeStream);
-
-    // === Nội dung PDF
-    doc.fontSize(20).fillColor("#dc143c").text("BIÊN LAI THU TIỀN", {
-      align: "center",
-    });
-
-    const year = data.ngaybienlai?.split("-")[2]?.split(" ")[0] || "";
-    const sobienlai = data.sobienlai || "___";
-
-    doc.fontSize(10).fillColor("black");
-    doc.text(`Số: ${sobienlai}`, { align: "right" });
-    doc.text(`Ngày: ${data.ngaybienlai}`, { align: "right" });
-
+    // Nội dung demo
+    doc.fontSize(20).text("BIÊN LAI THU TIỀN (DEMO)", { align: "center" });
     doc.moveDown();
-    doc.text(`Họ tên: ${data.hoTen}`);
-    doc.text(`Mã số BHXH: ${data.maSoBhxh}`);
-    doc.text(`Địa chỉ: ${data.tenquanhuyen}, ${data.tentinh}`);
-
-    const noidung =
-      data.maloaihinh === "AR" || data.maloaihinh === "BI"
-        ? `Tiền đóng BHYT, phương thức ${data.soThang} tháng, từ ${data.tuNgay} đến ${data.denNgay}`
-        : `Đóng tiền tham gia BHXH Tự nguyện`;
-
-    doc.text(`Nội dung: ${noidung}`);
-
-    const sotien = Number(data.soTien).toLocaleString("vi-VN");
-    doc.text(`Số tiền: ${sotien} VNĐ`);
-
-    const tienChu = num2words(data.soTien, { lang: "vi" });
-    doc.text(
-      `Bằng chữ: ${tienChu.charAt(0).toUpperCase() + tienChu.slice(1)} đồng`
-    );
-
+    doc.fontSize(12).text("Họ tên: Nguyễn Văn A");
+    doc.text("Số tiền: 500,000 VNĐ");
+    doc.text("Nội dung: Đóng BHYT tự nguyện");
     doc.moveDown(2);
     doc.text("Người nộp tiền", 100, doc.y, { align: "left" });
     doc.text("Người thu tiền", 350, doc.y, { align: "right" });
-    doc.text(`${data.hoTen}`, 100, doc.y + 20, { align: "left" });
-    doc.text(`${data.tennguoitao || "Người thu"}`, 350, doc.y + 20, {
-      align: "right",
-    });
+    doc.text("Nguyễn Văn A", 100, doc.y + 20, { align: "left" });
+    doc.text("Cán bộ thu", 350, doc.y + 20, { align: "right" });
 
-    // Kết thúc tài liệu
     doc.end();
 
-    // ✅ Gửi phản hồi sau khi ghi xong
-    writeStream.on("finish", () => {
+    stream.on("finish", () => {
       return res.json({
         success: true,
-        fileUrl: `/static/bienlaidientu/${filename}`, // frontend cần ánh xạ đúng
+        message: "Tạo biên lai demo thành công",
+        filePath: filePath,
+        fileUrl: `http://${urlServerBackend}/static/bienlaidientu/${filename}`,
       });
     });
 
-    // ❌ Bắt lỗi ghi file nếu có
-    writeStream.on("error", (err) => {
+    stream.on("error", (err) => {
       console.error("Lỗi khi ghi file PDF:", err);
       return res
         .status(500)
-        .json({ success: false, message: "Lỗi ghi file PDF" });
+        .json({ success: false, message: "Không thể ghi file PDF" });
     });
   } catch (err) {
-    console.error("Lỗi xử lý tạo biên lai:", err);
-    res.status(500).json({ success: false, message: "Lỗi tạo biên lai" });
+    console.error("Lỗi tạo PDF:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Lỗi server khi tạo PDF" });
   }
 });
 
@@ -481,6 +477,17 @@ router.post("/add-kekhai-series", async (req, res) => {
     // bắt đầu kết nối
     await pool.connect();
 
+    const currentYear = new Date().getFullYear();
+    // Lấy max số biên lai hiện tại cho năm tài chính
+    const resultBienlai = await pool.request().input("namtaichinh", currentYear)
+      .query(`SELECT MAX(sobienlai) AS max
+        FROM bienlai
+        WHERE namtaichinh = @namtaichinh;`);
+
+    let maxInvoiceStr = resultBienlai.recordset[0].max || "0000000";
+    let maxInvoiceNum = parseInt(maxInvoiceStr, 10);
+    // console.log("Max Invoice Number:", maxInvoiceNum);
+
     // Lấy số hồ sơ lớn nhất hiện tại để tạo số hồ sơ duy nhất
     const maxSoHoSoResult = await pool
       .request()
@@ -491,6 +498,12 @@ router.post("/add-kekhai-series", async (req, res) => {
       // Tạo số hồ sơ mới
       const newSoHoSo = maxSohoso + 1;
       const soHoso = `${newSoHoSo}/${item.nvt_masobhxh}/${item.nvt_cccd}`;
+
+      // tạo biên lai
+      // Tăng số biên lai mỗi vòng lặp
+      maxInvoiceNum += 1;
+      const nextInvoice = String(maxInvoiceNum).padStart(7, "0");
+      // console.log("Next Invoice Number:", nextInvoice);
 
       try {
         // Bắt đầu giao dịch
@@ -554,7 +567,7 @@ router.post("/add-kekhai-series", async (req, res) => {
           .input("kykekhai", item.kykekhai)
           .input("ngaykekhai", item.ngaykekhai)
           .input("ngaybienlai", item.ngaybienlai)
-          .input("sobienlai", item.sobienlai)
+          .input("sobienlai", nextInvoice)
           .input("trangthai", item.trangthai)
           .input("status_hosoloi", item.status_hosoloi)
           .input("status_naptien", item.status_naptien)
@@ -843,28 +856,10 @@ router.post("/ghidulieubienlai", async (req, res) => {
     transaction = new Transaction(pool);
     await transaction.begin();
 
-    const resultBienlai = await pool
-      .request()
-      .input("namtaichinh", dulieubienlai.currentYear)
-      .query(`SELECT MAX(sobienlai) AS max
-        FROM bienlai
-        WHERE namtaichinh = @namtaichinh;`);
-
-    let maxInvoiceStr = resultBienlai.recordset[0].max;
-    // console.log(maxInvoiceStr);
-    let nextInvoice = "";
-
-    if (!maxInvoiceStr) {
-      nextInvoice = "0000001";
-    } else {
-      const nextNumber = parseInt(maxInvoiceStr, 10) + 1;
-      nextInvoice = String(nextNumber).padStart(7, "0");
-    }
-
     const result = await transaction
       .request()
       .input("_id_hskk", dulieubienlai._id_hskk)
-      .input("sobienlai", nextInvoice)
+      .input("sobienlai", dulieubienlai.sobienlai)
       .input("ngaybienlai", dulieubienlai.ngaybienlai)
       .input("hoten", dulieubienlai.hoTen)
       .input("masobhxh", dulieubienlai.maSoBhxh)
@@ -878,7 +873,7 @@ router.post("/ghidulieubienlai", async (req, res) => {
       .input("tungay", dulieubienlai.tuNgay)
       .input("denngay", dulieubienlai.denNgay)
       .input("tuthang", dulieubienlai.tuThang)
-      .input("denthang", dulieubienlai.denNgay)
+      .input("denthang", dulieubienlai.denThang)
       .input("sotien", dulieubienlai.soTien)
       .input("madaily", dulieubienlai.maDaiLy)
       .input("tendaily", dulieubienlai.tenDaiLy)
@@ -898,7 +893,7 @@ router.post("/ghidulieubienlai", async (req, res) => {
     // cập nhật số biên lai
     await transaction
       .request()
-      .input("sobienlai", nextInvoice)
+      .input("sobienlai", dulieubienlai.sobienlai)
       .input("ngaykhoitao", dulieubienlai.ngaybienlai)
       .input("namtaichinh", dulieubienlai.currentYear)
       .input("ghichu", dulieubienlai.maSoBhxh)
@@ -1166,6 +1161,25 @@ router.get("/danhmucdaily", async (req, res) => {
     res.json(daily);
   } catch (error) {
     res.status(500).json(error);
+  }
+});
+
+// lấy ds kê khai dự vào identity của hồ sơ
+router.post("/getdskekhaiwithhsidentity", async (req, res) => {
+  try {
+    await pool.connect();
+
+    const dshsidentity = req.body.map((id) => `'${id}'`).join(", ");
+    // console.log("Chuỗi IN:", dshsidentity);
+
+    const query = `SELECT * FROM kekhai WHERE hosoIdentity IN (${dshsidentity})`;
+
+    const result = await pool.request().query(query);
+
+    res.json(result.recordset);
+  } catch (error) {
+    console.error("Lỗi:", error);
+    res.status(500).json({ message: "Lỗi truy vấn", error });
   }
 });
 
