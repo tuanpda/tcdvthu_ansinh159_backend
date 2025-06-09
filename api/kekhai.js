@@ -3065,9 +3065,10 @@ router.get("/tim-dulieuthe", async (req, res) => {
     const request = pool.request();
 
     if (!isHoTenEmpty) {
-      query += ` AND hoTen = @hoTen`;
-      request.input("hoTen", hoTen.trim());
+      query += ` AND hoTen LIKE @hoTen`;
+      request.input("hoTen", `%${hoTen.trim()}%`);
     }
+
 
     if (!isSoSoEmpty) {
       query += ` AND soSoBhxh = @soSoBhxh`;
