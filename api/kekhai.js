@@ -26,8 +26,8 @@ let urlServerBackend;
 if (checkDB === "tcdvthu_ansinh159") {
   // var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
   thumucbienlai =
-    // "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
-  "D:\\";    // test máy tuấn máy bàn
+    "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
+  // "D:\\";    // test máy tuấn máy bàn
   // var folderBienlaidientu =
   // "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
   urlServer = "14.224.129.177:1970";
