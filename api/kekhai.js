@@ -26,8 +26,8 @@ let urlServerBackend;
 if (checkDB === "tcdvthu_ansinh159") {
   // var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
   thumucbienlai =
-    "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
-  // var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
+    // "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
+  "D:\\";    // test máy tuấn máy bàn
   // var folderBienlaidientu =
   // "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
   urlServer = "14.224.129.177:1970";
@@ -2780,7 +2780,10 @@ router.post("/thongke-hosokekhai", async (req, res) => {
           COALESCE(SUM(CASE WHEN status_naptien = 0 AND trangthai = 1 THEN 1 ELSE 0 END), 0) AS hoso_chuaduyet,
           COALESCE(SUM(CASE WHEN trangthai = 0 AND status_naptien=0 THEN 1 ELSE 0 END), 0) AS hoso_chuagui,
           COUNT(DISTINCT sohoso) AS tong_sohoso,
-          COALESCE(SUM(CAST(sotien AS FLOAT)), 0) AS tong_sotien,
+          COALESCE(
+              SUM(CASE WHEN status_naptien = 1 THEN CAST(sotien AS FLOAT) ELSE 0 END),
+              0
+            ) AS tong_sotien,
           COALESCE(SUM(CASE WHEN maloaihinh = 'AR' THEN 1 ELSE 0 END), 0) AS tong_AR,
           COALESCE(SUM(CASE WHEN maloaihinh = 'BI' THEN 1 ELSE 0 END), 0) AS tong_BI,
           COALESCE(SUM(CASE WHEN maloaihinh = 'IS' THEN 1 ELSE 0 END), 0) AS tong_IS
@@ -2814,7 +2817,10 @@ router.get("/thongke-hosokekhai-tonghop", async (req, res) => {
           COALESCE(SUM(CASE WHEN status_naptien = 0 AND trangthai = 1 THEN 1 ELSE 0 END), 0) AS hoso_chuaduyet,
           COALESCE(SUM(CASE WHEN trangthai = 0 AND status_naptien=0 THEN 1 ELSE 0 END), 0) AS hoso_chuagui,
           COUNT(DISTINCT sohoso) AS tong_sohoso,
-          COALESCE(SUM(CAST(sotien AS FLOAT)), 0) AS tong_sotien,
+          COALESCE(
+              SUM(CASE WHEN status_naptien = 1 THEN CAST(sotien AS FLOAT) ELSE 0 END),
+              0
+            ) AS tong_sotien,
           COALESCE(SUM(CASE WHEN maloaihinh = 'AR' THEN 1 ELSE 0 END), 0) AS tong_AR,
           COALESCE(SUM(CASE WHEN maloaihinh = 'BI' THEN 1 ELSE 0 END), 0) AS tong_BI,
           COALESCE(SUM(CASE WHEN maloaihinh = 'IS' THEN 1 ELSE 0 END), 0) AS tong_IS
