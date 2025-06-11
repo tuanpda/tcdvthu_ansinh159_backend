@@ -663,4 +663,51 @@ router.get("/tim-kiem-thong-tin-han-the", async (req, res) => {
   }
 });
 
+router.get("/tim-kiem-thong-tin-hgd", async (req, res) => {
+  try {
+    const { soBhxh, SO_DDCN_CCCD_BCA } = req.query;
+
+    await pool.connect();
+
+    let result;
+
+    if (soBhxh) {
+      result = await pool
+        .request()
+        .input("soBhxh", soBhxh)
+        .query(`SELECT * FROM hosocanhan WHERE soBhxh = @soBhxh`);
+    } else {
+      result = await pool
+        .request()
+        .input("SO_DDCN_CCCD_BCA", SO_DDCN_CCCD_BCA)
+        .query(
+          `SELECT * FROM hosocanhan WHERE SO_DDCN_CCCD_BCA = @SO_DDCN_CCCD_BCA`
+        );
+    }
+
+    const canhan = result.recordset[0] || null;
+
+    let thongtinHgd = [];
+
+    if (canhan && canhan.maHoGiaDinh) {
+      const hoGiaDinhResult = await pool
+        .request()
+        .input("maHoGiaDinh", canhan.maHoGiaDinh)
+        .query(
+          `SELECT * FROM hosocanhan WHERE maHoGiaDinh = @maHoGiaDinh order by stt_ho`
+        );
+      thongtinHgd = hoGiaDinhResult.recordset;
+    }
+
+    res.json({
+      success: true,
+      canhan,
+      thongtinHgd,
+    });
+  } catch (error) {
+    console.error("Lỗi truy vấn:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
