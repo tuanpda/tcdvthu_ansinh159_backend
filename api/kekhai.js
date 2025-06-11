@@ -987,7 +987,7 @@ router.post("/apply-invoice-status", async (req, res) => {
 
 // xác nhận huỷ duyệt hồ sơ
 router.post("/cancel-invoice-status", async (req, res) => {
-  const { _id, hoten, masobhxh, hosoIdentity } = req.body;
+  const { _id, hoten, masobhxh, ghichu } = req.body;
 
   let transaction = null;
 
@@ -1001,7 +1001,8 @@ router.post("/cancel-invoice-status", async (req, res) => {
     const request = transaction.request();
     await request
       .input("_id", _id)
-      .query(`UPDATE kekhai SET trangthai=1 WHERE _id=@_id`);
+      .input("ghichu", ghichu)
+      .query(`UPDATE kekhai SET trangthai=1, ghichu=@ghichu WHERE _id=@_id`);
 
     await transaction.commit();
 
@@ -1012,6 +1013,7 @@ router.post("/cancel-invoice-status", async (req, res) => {
         _id,
         hoten,
         masobhxh,
+        ghichu,
       },
     });
   } catch (error) {
