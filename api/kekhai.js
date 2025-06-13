@@ -987,6 +987,8 @@ router.post("/apply-invoice-status", async (req, res) => {
 
 // xác nhận huỷ duyệt hồ sơ
 router.post("/cancel-invoice-status", async (req, res) => {
+  // console.log(req.body);
+  
   const { _id, hoten, masobhxh, ghichu } = req.body;
 
   let transaction = null;
@@ -1961,7 +1963,7 @@ router.get("/kykekhai-search-hoso", async (req, res) => {
 
     // Thêm phần phân trang CONVERT(VARCHAR(10), ngaykekhai, 105) BETWEEN '13-12-2024' AND '14-12-2024';
     query +=
-      " ORDER BY dotkekhai OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
+      " ORDER BY _id desc OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
 
     // console.log(query);
 
@@ -2106,7 +2108,7 @@ router.get("/kykekhai-search-hoso-diemthu", async (req, res) => {
 
     // Thêm phần phân trang CONVERT(VARCHAR(10), ngaykekhai, 105) BETWEEN '13-12-2024' AND '14-12-2024';
     query +=
-      " ORDER BY dotkekhai OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
+      " ORDER BY _id desc OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
 
     // console.log(query);
 
@@ -2254,7 +2256,7 @@ router.get("/kykekhai-search-hoso-daguilencong", async (req, res) => {
 
     // Thêm phần phân trang CONVERT(VARCHAR(10), ngaykekhai, 105) BETWEEN '13-12-2024' AND '14-12-2024';
     query +=
-      " ORDER BY dotkekhai OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
+      " ORDER BY _id desc OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
 
     // console.log(query);
 
@@ -2399,7 +2401,7 @@ router.get("/kykekhai-search-hoso-diemthu-daguilencong", async (req, res) => {
 
     // Thêm phần phân trang CONVERT(VARCHAR(10), ngaykekhai, 105) BETWEEN '13-12-2024' AND '14-12-2024';
     query +=
-      " ORDER BY dotkekhai OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
+      " ORDER BY _id desc OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
 
     // console.log(query);
 
