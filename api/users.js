@@ -18,7 +18,7 @@ if (checkDB === "tcdvthu_ansinh159") {
     "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\avatar";
   // var folderBienlaidientu = "D:\\";    // test máy tuấn máy bàn
   // var folderBienlaidientu =
-  // "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+  // "/Users/apple/Documents/code/p_159/tcdvthu_ansinh159_client/static/avatar"; // macos
   urlServer = "14.224.129.177:1970";
 } else {
   folderAvatar =
@@ -191,12 +191,14 @@ router.post("/user/fix", upload.single("avatar"), async (req, res) => {
     // Ghép đường dẫn và tên tệp bằng phương thức path.join()
     const filePath = path.join(basePath, fileName);
     // console.log(filePath);
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error("error", err);
-        return;
-      }
-    });
+    if (fileName !== "image-default.jpg") {
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error("Đã xảy ra lỗi khi xóa tệp:", err);
+          // Không return ở đây để vẫn tiếp tục xóa record
+        }
+      });
+    }
     linkAvatar = `http://${urlServer}/avatar/${req.file.filename}`;
   }
   try {
@@ -260,6 +262,150 @@ router.post("/user/fix", upload.single("avatar"), async (req, res) => {
     res.status(500).json(error);
   }
 });
+
+// cập nhật thông tin người dùng
+router.post("/user/fix-info", upload.single("avatar"), async (req, res) => {
+  let linkAvatar;
+  // console.log(req.body);
+  if (!req.file) {
+    linkAvatar = req.body.avatar;
+  } else {
+    // xóa file ảnh cũ
+    const basePath = folderAvatar;
+    // "D:\\PROJECT\\TCDVTHU\\client\\static\\avatar"; // đổi đường dẫn khi up lên máy chủ
+    const fileName = path.basename(req.body.avatarOld);
+    // console.log(fileName);
+    // Ghép đường dẫn và tên tệp bằng phương thức path.join()
+    const filePath = path.join(basePath, fileName);
+    // console.log(filePath);
+    if (fileName !== "image-default.jpg") {
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error("Đã xảy ra lỗi khi xóa tệp:", err);
+          // Không return ở đây để vẫn tiếp tục xóa record
+        }
+      });
+    }
+    linkAvatar = `http://${urlServer}/avatar/${req.file.filename}`;
+  }
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input("_id", req.body._id)
+      .query(`SELECT * FROM users WHERE _id = @_id`);
+    let user = result.recordset[0];
+    // console.log(user);
+    if (user) {
+      await pool
+        .request()
+        .input("_id", req.body._id)
+        .input("sodienthoai", req.body.sodienthoai)
+        .input("email", req.body.email)
+        .input("name", req.body.name)
+        .input("avatar", linkAvatar)
+        .input("updatedAt", req.body.updatedAt)
+        .input("updatedBy", req.body.updatedBy)
+        .query(
+          `UPDATE users SET 
+              sodienthoai = @sodienthoai,
+              email = @email, 
+              name = @name,
+              avatar = @avatar,
+              updatedAt = @updatedAt,
+              updatedBy = @updatedBy
+          WHERE _id = @_id;`
+        );
+      res.json({
+        success: true,
+        message: "Update success !",
+      });
+    }
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// cập nhật thông tin người dùng
+router.post(
+  "/user/fix-info-pass",
+  upload.single("avatar"),
+  async (req, res) => {
+    let linkAvatar;
+    const password = req.body.password;
+    const newPassword = req.body.newPassword;
+    // console.log(req.body);
+    if (!req.file) {
+      linkAvatar = req.body.avatar;
+    } else {
+      // xóa file ảnh cũ
+      const basePath = folderAvatar;
+      // "D:\\PROJECT\\TCDVTHU\\client\\static\\avatar"; // đổi đường dẫn khi up lên máy chủ
+      const fileName = path.basename(req.body.avatarOld);
+      // console.log(fileName);
+      // Ghép đường dẫn và tên tệp bằng phương thức path.join()
+      const filePath = path.join(basePath, fileName);
+      // console.log(filePath);
+      if (fileName !== "image-default.jpg") {
+        fs.unlink(filePath, (err) => {
+          if (err) {
+            console.error("Đã xảy ra lỗi khi xóa tệp:", err);
+            // Không return ở đây để vẫn tiếp tục xóa record
+          }
+        });
+      }
+      linkAvatar = `http://${urlServer}/avatar/${req.file.filename}`;
+    }
+    try {
+      await pool.connect();
+      const result = await pool
+        .request()
+        .input("_id", req.body._id)
+        .query(`SELECT * FROM users WHERE _id = @_id`);
+      let user = result.recordset[0];
+      // console.log(user);
+      if (user && req.body.password) {
+        const match = await bcrypt.compare(password, user.password);
+        if (match) {
+          const encryptedPassword = await bcrypt.hash(newPassword, 10);
+
+          await pool
+            .request()
+            .input("_id", req.body._id)
+            .input("sodienthoai", req.body.sodienthoai)
+            .input("email", req.body.email)
+            .input("name", req.body.name)
+            .input("password", encryptedPassword)
+            .input("avatar", linkAvatar)
+            .input("updatedAt", req.body.updatedAt)
+            .input("updatedBy", req.body.updatedBy)
+            .query(
+              `UPDATE users SET 
+              sodienthoai = @sodienthoai,
+              email = @email, 
+              name = @name,
+              password = @password,
+              avatar = @avatar,
+              updatedAt = @updatedAt,
+              updatedBy = @updatedBy
+          WHERE _id = @_id;`
+            );
+          res.json({
+            success: true,
+            message: "Update success !",
+          });
+        } else {
+          res.json({
+            success: 5,
+            message: "Sai pass !",
+          });
+        }
+      }
+    } catch (error) {
+      res.status(500).json(error);
+    }
+  }
+);
 
 // Đổi mật khẩu và email
 router.post("/user/changepass", async (req, res) => {
@@ -654,7 +800,7 @@ router.post("/import-uses", async (req, res) => {
           message: "Create user success!",
           success: true,
         });
-        console.log(token);
+        // console.log(token);
       } catch (error) {
         console.log(error);
       }
