@@ -3101,4 +3101,237 @@ router.get("/tim-dulieuthe", async (req, res) => {
   }
 });
 
+// quản lý biên lai
+router.get("/bienlai-search", async (req, res) => {
+  // console.log(req.query);
+  
+  try {
+    const {
+      active,
+      ngaykekhai,
+      ngaykekhaiden,
+      masobhxh,
+      hoten,
+      tendaily,
+      loaihinh,
+      page = 1,
+      limit = 30,
+    } = req.query;
+
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const offset = (pageNumber - 1) * limitNumber;
+
+    let query = `SELECT * FROM bienlaidientu WHERE 1=1`;
+    let queryCount = `SELECT COUNT(*) AS totalCount FROM bienlaidientu WHERE 1=1`;
+
+    const request = pool.request();
+
+    if (active === "1" || active === "0") {
+      query += " AND active = @active";
+      queryCount += " AND active = @active";
+      request.input("active", active === "1" ? 1 : 0);
+    }
+
+    if (ngaykekhai && !ngaykekhaiden) {
+      query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaybienlai, 105)) = @ngaykekhai`;
+      queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaybienlai, 105)) = @ngaykekhai`;
+      request.input("ngaykekhai", new Date(ngaykekhai));
+    }
+
+    if (ngaykekhai && ngaykekhaiden) {
+      query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaybienlai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
+      queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaybienlai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
+      request.input("ngaykekhai", new Date(ngaykekhai));
+      request.input("ngaykekhaiden", new Date(ngaykekhaiden));
+    }
+
+    if (masobhxh) {
+      query += " AND masobhxh = @masobhxh";
+      queryCount += " AND masobhxh = @masobhxh";
+      request.input("masobhxh", masobhxh.trim());
+    }
+
+    if (hoten) {
+      query += " AND hoten LIKE @hoten";
+      queryCount += " AND hoten LIKE @hoten";
+      request.input("hoten", `%${hoten.trim()}%`);
+    }
+
+    if (tendaily) {
+      query += " AND tendaily LIKE @tendaily";
+      queryCount += " AND tendaily LIKE @tendaily";
+      request.input("tendaily", `%${tendaily.trim()}%`);
+    }
+
+    if (loaihinh) {
+      query += " AND loaihinh = @loaihinh";
+      queryCount += " AND loaihinh = @loaihinh";
+      request.input("loaihinh", loaihinh);
+    }
+
+    query += ` ORDER BY _id DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
+    request.input("offset", offset);
+    request.input("limit", limitNumber);
+
+    await pool.connect();
+
+    const result = await request.query(query);
+
+    // Tính count
+    const countRequest = pool.request();
+    if (active === "1" || active === "0") countRequest.input("active", active === "1" ? 1 : 0);
+    if (ngaykekhai && !ngaykekhaiden) countRequest.input("ngaykekhai", new Date(ngaykekhai));
+    if (ngaykekhai && ngaykekhaiden) {
+      countRequest.input("ngaykekhai", new Date(ngaykekhai));
+      countRequest.input("ngaykekhaiden", new Date(ngaykekhaiden));
+    }
+    if (masobhxh) countRequest.input("masobhxh", masobhxh.trim());
+    if (hoten) countRequest.input("hoten", `%${hoten.trim()}%`);
+    if (tendaily) countRequest.input("tendaily", `%${tendaily.trim()}%`);
+    if (loaihinh) countRequest.input("loaihinh", loaihinh);
+
+    const countResult = await countRequest.query(queryCount);
+    const totalCount = countResult.recordset[0].totalCount;
+    const totalPages = Math.ceil(totalCount / limitNumber);
+
+    const info = {
+      count: totalCount,
+      pages: totalPages,
+      next: pageNumber < totalPages ? `${req.path}?page=${pageNumber + 1}&limit=${limit}` : null,
+      prev: pageNumber > 1 ? `${req.path}?page=${pageNumber - 1}&limit=${limit}` : null,
+    };
+
+    res.json({ info, results: result.recordset });
+
+    // console.log("Query cuối:", query);
+    // console.log("Input:", req.query); 
+
+
+  } catch (err) {
+    console.error("Lỗi tìm kiếm biên lai:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    pool.close();
+  }
+});
+
+// quản lý biên lai từng điểm thu
+router.get("/bienlai-search-diemthu", async (req, res) => {
+  // console.log(req.query);
+  
+  try {
+    const {
+      madaily,
+      active,
+      ngaykekhai,
+      ngaykekhaiden,
+      masobhxh,
+      hoten,
+      tendaily,
+      loaihinh,
+      page = 1,
+      limit = 30,
+    } = req.query;
+
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const offset = (pageNumber - 1) * limitNumber;
+
+    let query = `SELECT * FROM bienlaidientu WHERE madaily=@madaily`;
+    let queryCount = `SELECT COUNT(*) AS totalCount FROM bienlaidientu WHERE madaily=@madaily`;
+
+    const request = pool.request();
+
+    request.input("madaily", madaily);
+
+    if (active === "1" || active === "0") {
+      query += " AND active = @active";
+      queryCount += " AND active = @active";
+      request.input("active", active === "1" ? 1 : 0);
+    }
+
+    if (ngaykekhai && !ngaykekhaiden) {
+      query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaybienlai, 105)) = @ngaykekhai`;
+      queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaybienlai, 105)) = @ngaykekhai`;
+      request.input("ngaykekhai", new Date(ngaykekhai));
+    }
+
+    if (ngaykekhai && ngaykekhaiden) {
+      query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaybienlai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
+      queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaybienlai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
+      request.input("ngaykekhai", new Date(ngaykekhai));
+      request.input("ngaykekhaiden", new Date(ngaykekhaiden));
+    }
+
+    if (masobhxh) {
+      query += " AND masobhxh = @masobhxh";
+      queryCount += " AND masobhxh = @masobhxh";
+      request.input("masobhxh", masobhxh.trim());
+    }
+
+    if (hoten) {
+      query += " AND hoten LIKE @hoten";
+      queryCount += " AND hoten LIKE @hoten";
+      request.input("hoten", `%${hoten.trim()}%`);
+    }
+
+    if (tendaily) {
+      query += " AND tendaily LIKE @tendaily";
+      queryCount += " AND tendaily LIKE @tendaily";
+      request.input("tendaily", `%${tendaily.trim()}%`);
+    }
+
+    if (loaihinh) {
+      query += " AND loaihinh = @loaihinh";
+      queryCount += " AND loaihinh = @loaihinh";
+      request.input("loaihinh", loaihinh);
+    }
+
+    query += ` ORDER BY _id DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
+    request.input("offset", offset);
+    request.input("limit", limitNumber);
+
+    await pool.connect();
+
+    const result = await request.query(query);
+
+    // Tính count
+    const countRequest = pool.request();
+    if (active === "1" || active === "0") countRequest.input("active", active === "1" ? 1 : 0);
+    if (ngaykekhai && !ngaykekhaiden) countRequest.input("ngaykekhai", new Date(ngaykekhai));
+    if (ngaykekhai && ngaykekhaiden) {
+      countRequest.input("ngaykekhai", new Date(ngaykekhai));
+      countRequest.input("ngaykekhaiden", new Date(ngaykekhaiden));
+    }
+    if (masobhxh) countRequest.input("masobhxh", masobhxh.trim());
+    if (hoten) countRequest.input("hoten", `%${hoten.trim()}%`);
+    if (tendaily) countRequest.input("tendaily", `%${tendaily.trim()}%`);
+    if (loaihinh) countRequest.input("loaihinh", loaihinh);
+
+    const countResult = await countRequest.query(queryCount);
+    const totalCount = countResult.recordset[0].totalCount;
+    const totalPages = Math.ceil(totalCount / limitNumber);
+
+    const info = {
+      count: totalCount,
+      pages: totalPages,
+      next: pageNumber < totalPages ? `${req.path}?page=${pageNumber + 1}&limit=${limit}` : null,
+      prev: pageNumber > 1 ? `${req.path}?page=${pageNumber - 1}&limit=${limit}` : null,
+    };
+
+    res.json({ info, results: result.recordset });
+
+    // console.log("Query cuối:", query);
+    // console.log("Input:", req.query); 
+
+
+  } catch (err) {
+    console.error("Lỗi tìm kiếm biên lai:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    pool.close();
+  }
+});
+
 module.exports = router;
