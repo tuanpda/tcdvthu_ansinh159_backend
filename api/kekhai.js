@@ -29,7 +29,8 @@ if (checkDB === "tcdvthu_ansinh159") {
     "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
   // "D:\\";    // test máy tuấn máy bàn
   // var folderBienlaidientu =
-  // "/Users/apple/Documents/code/p_Tcdvthu_Ansinh159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+  // "/Users/apple/Documents/code/p_159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+  // "/Users/apple/Documents/code/p_159";
   urlServer = "14.224.129.177:1970";
   urlServerBackend = "14.224.129.177:4213"; // máy chủ tuấn pda
 } else {
@@ -472,6 +473,7 @@ router.post("/add-kekhai-series", async (req, res) => {
   let transaction = null;
   const listSuccess = [];
   const listFailed = [];
+  // console.log(dataKekhai.ngaybienlai);
 
   try {
     // bắt đầu kết nối
@@ -1068,6 +1070,91 @@ router.post("/updatestatushoso", async (req, res) => {
     res.json(kekhai);
   } catch (error) {
     res.status(500).json(error);
+  }
+});
+
+// reset hồ sơ từ đã huỷ duyệt sang chưa phê duyệt
+router.post("/reset-hoso-from-dahuy-to-chuaduyet", async (req, res) => {
+  // console.log(req.body);
+  const { _id, hoten, masobhxh } = req.body;
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input("_id", _id)
+      .query(`UPDATE kekhai SET trangthai=0 where _id=@_id`);
+
+    res.json({
+      success: true,
+      message: `Cập nhật thành công cho _id: ${_id}`,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
+      },
+    });
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// xác nhận reset hồ sơ từ đã phê duyệt sang chưa phê duyệt
+router.post("/reset-hoso-from-daduyet-to-chuaduyet", async (req, res) => {
+  const { _id, hoten, masobhxh, hosoIdentity } = req.body;
+
+  let transaction = null;
+
+  try {
+    await pool.connect();
+
+    transaction = new Transaction(pool);
+    await transaction.begin();
+
+    // Câu 1: cập nhật bảng kekhai
+    const request1 = transaction.request();
+    await request1
+      .input("_id", _id)
+      .query(`UPDATE kekhai SET status_naptien=0 WHERE _id=@_id`);
+
+    // Câu 2: cập nhật bảng bienlaidientu
+    const request2 = transaction.request();
+    await request2
+      .input("hosoIdentity", hosoIdentity)
+      .query(
+        `UPDATE bienlaidientu SET active=0 WHERE hosoIdentity=@hosoIdentity`
+      );
+
+    // Câu 3: cập nhật bảng bienlai
+    const request3 = transaction.request();
+    await request3
+      .input("hosoIdentity", hosoIdentity)
+      .query(`UPDATE bienlai SET active=0 WHERE hosoIdentity=@hosoIdentity`);
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      message: `Cập nhật thành công cho _id: ${_id}`,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
+      },
+    });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    res.status(500).json({
+      success: false,
+      message: `Thất bại cập nhật _id: ${_id}`,
+      error: error.message,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
+      },
+    });
+  } finally {
+    if (pool.connected) await pool.close();
   }
 });
 
