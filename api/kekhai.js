@@ -15,7 +15,6 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const PDFDocument = require("pdfkit");
-const num2words = require("num2words");
 
 // console.log(process.env.SQL_DATABASE);
 
@@ -24,7 +23,6 @@ let thumucbienlai = "";
 let urlServer = "";
 let urlServerBackend;
 if (checkDB === "tcdvthu_ansinh159") {
-  // var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
   thumucbienlai =
     "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
   // "D:\\";    // test máy tuấn máy bàn
