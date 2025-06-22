@@ -2140,6 +2140,7 @@ router.get("/kykekhai-search-hoso-diemthu", async (req, res) => {
       maloaihinh,
       hoten,
       madaily,
+      cccd,
       trangthaihs,
       page = 1,
       limit = 30,
@@ -2158,9 +2159,9 @@ router.get("/kykekhai-search-hoso-diemthu", async (req, res) => {
     // console.log(ngaykekhaiInput);
 
     // Khởi tạo câu truy vấn cơ bản
-    let query = "SELECT * FROM kekhai WHERE madaily=@madaily and 1=1";
+    let query = `SELECT * FROM kekhai WHERE RIGHT(sohoso, 12) = '${cccd}'`;
     let queryCount =
-      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE madaily=@madaily and 1=1";
+      `SELECT COUNT(*) AS totalCount FROM kekhai WHERE RIGHT(sohoso, 12) = '${cccd}'`;
 
     // Thêm các điều kiện tìm kiếm nếu có
     if (trangthaihs) {
@@ -2882,15 +2883,15 @@ router.get("/view-item-bienlai", async (req, res) => {
 router.post("/thongke-hosokekhai", async (req, res) => {
   // console.log(req.body);
 
-  const { madaily } = req.body;
+  const { cccd } = req.body;
 
-  if (!madaily) {
+  if (!cccd) {
     return res.status(400).json({ success: false, message: "Thiếu mã đại lý" });
   }
 
   try {
     await pool.connect();
-    const request = pool.request().input("madaily", madaily);
+    const request = pool.request().input("cccd", cccd);
 
     const query = `
       SELECT 
@@ -2908,7 +2909,7 @@ router.post("/thongke-hosokekhai", async (req, res) => {
           COALESCE(SUM(CASE WHEN maloaihinh = 'BI' THEN 1 ELSE 0 END), 0) AS tong_BI,
           COALESCE(SUM(CASE WHEN maloaihinh = 'IS' THEN 1 ELSE 0 END), 0) AS tong_IS
       FROM kekhai
-      WHERE madaily = @madaily
+      WHERE RIGHT(sohoso, 12) = @cccd
     `;
 
     const result = await request.query(query);
@@ -3350,6 +3351,7 @@ router.get("/bienlai-search-diemthu", async (req, res) => {
       masobhxh,
       hoten,
       loaihinh,
+      cccd,
       page = 1,
       limit = 30,
     } = req.query;
@@ -3358,8 +3360,8 @@ router.get("/bienlai-search-diemthu", async (req, res) => {
     const limitNumber = parseInt(limit, 10);
     const offset = (pageNumber - 1) * limitNumber;
 
-    let query = `SELECT * FROM bienlaidientu WHERE madaily=@madaily`;
-    let queryCount = `SELECT COUNT(*) AS totalCount FROM bienlaidientu WHERE madaily=@madaily`;
+    let query = `SELECT * FROM bienlaidientu WHERE RIGHT(sohoso, 12) = '${cccd}'`;
+    let queryCount = `SELECT COUNT(*) AS totalCount FROM bienlaidientu WHERE RIGHT(sohoso, 12) = '${cccd}'`;
 
     const request = pool.request();
 
