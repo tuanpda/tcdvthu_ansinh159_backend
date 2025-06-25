@@ -494,6 +494,20 @@ router.get("/diaphuonghtis", async (req, res) => {
   }
 });
 
+// tỷ lệ địa phương hỗ trợ IL
+router.get("/diaphuonghtIL", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .query(`SELECT * FROM dm_tylediaphuonghtIL where active=1`);
+    const kq = result.recordset;
+    res.json(kq);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
 // tỷ lệ địa phương hỗ trợ IS all
 router.get("/diaphuonghtisall", async (req, res) => {
   try {

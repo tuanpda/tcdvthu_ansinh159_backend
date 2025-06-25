@@ -884,11 +884,12 @@ router.post("/ghidulieubienlai", async (req, res) => {
       .input("tenquanhuyen", dulieubienlai.tenquanhuyen)
       .input("tentinh", dulieubienlai.tentinh)
       .input("active", 0)
-      .input("urlNameInvoice", dulieubienlai.urlNameInvoice).query(`
+      .input("urlNameInvoice", dulieubienlai.urlNameInvoice)
+      .input("cccd_nguoithutien", dulieubienlai.cccd_nguoithutien).query(`
                   INSERT INTO bienlaidientu (_id_hskk, sobienlai, ngaybienlai, hoten, masobhxh, ngaysinh, gioitinh, cccd, sodienthoai, nguoithutien, loaihinh, sothang,
-                    tungay, denngay, tuthang, denthang, sotien, madaily, tendaily, hosoIdentity, maxacnhan, tothon, tenquanhuyen, tentinh, active, urlNameInvoice)
+                    tungay, denngay, tuthang, denthang, sotien, madaily, tendaily, hosoIdentity, maxacnhan, tothon, tenquanhuyen, tentinh, active, urlNameInvoice, cccd_nguoithutien)
                   VALUES (@_id_hskk, @sobienlai, @ngaybienlai, @hoten, @masobhxh, @ngaysinh, @gioitinh, @cccd, @sodienthoai, @nguoithutien, @loaihinh, @sothang,
-                    @tungay, @denngay, @tuthang, @denthang, @sotien, @madaily, @tendaily, @hosoIdentity, @maxacnhan, @tothon, @tenquanhuyen, @tentinh, @active, @urlNameInvoice);
+                    @tungay, @denngay, @tuthang, @denthang, @sotien, @madaily, @tendaily, @hosoIdentity, @maxacnhan, @tothon, @tenquanhuyen, @tentinh, @active, @urlNameInvoice, @cccd_nguoithutien);
               `);
 
     // cập nhật số biên lai
@@ -2886,7 +2887,7 @@ router.post("/thongke-hosokekhai", async (req, res) => {
   const { cccd } = req.body;
 
   if (!cccd) {
-    return res.status(400).json({ success: false, message: "Thiếu mã đại lý" });
+    return res.status(400).json({ success: false, message: "Thiếu CCCD" });
   }
 
   try {
@@ -3001,7 +3002,7 @@ router.get("/baocao-loaihinh-kekhai-theo-thang-nam-daily", async (req, res) => {
 
     const nam = parseInt(req.query.nam);
     const thang = parseInt(req.query.thang);
-    const madaily = req.query.madaily;
+    const cccd = req.query.cccd;
 
     const query = `
       SELECT 
@@ -3012,7 +3013,7 @@ router.get("/baocao-loaihinh-kekhai-theo-thang-nam-daily", async (req, res) => {
         TRY_CONVERT(datetime, ngaykekhai, 105) IS NOT NULL
         AND YEAR(CONVERT(datetime, ngaykekhai, 105)) = ${nam}
         AND MONTH(CONVERT(datetime, ngaykekhai, 105)) = ${thang}
-        AND madaily='${madaily}'
+        AND RIGHT(sohoso, 12) = ${cccd}
       GROUP BY maloaihinh
       ORDER BY maloaihinh
     `;
@@ -3037,15 +3038,16 @@ router.get("/baocao-tongtien-theo-daily-thang-nam", async (req, res) => {
 
     const query = `
       SELECT 
-        madaily,
-        SUM(CAST(sotien AS FLOAT)) AS tongtien
+          RIGHT(sohoso, 12) AS cccd,
+          SUM(CAST(sotien AS FLOAT)) AS tongtien
       FROM kekhai
       WHERE 
-        TRY_CONVERT(datetime, ngaykekhai, 105) IS NOT NULL
-        AND YEAR(CONVERT(datetime, ngaykekhai, 105)) = ${nam}
-        AND MONTH(CONVERT(datetime, ngaykekhai, 105)) = ${thang}
-      GROUP BY madaily
-      ORDER BY tongtien DESC
+          TRY_CONVERT(datetime, ngaykekhai, 105) IS NOT NULL
+          AND YEAR(TRY_CONVERT(datetime, ngaykekhai, 105)) = ${nam}
+          AND MONTH(TRY_CONVERT(datetime, ngaykekhai, 105)) = ${thang}
+      GROUP BY RIGHT(sohoso, 12)
+      ORDER BY tongtien DESC;
+
     `;
 
     const result = await request.query(query);
@@ -3065,13 +3067,13 @@ router.get("/baocao-tongtien-daily-theo-thang-nam", async (req, res) => {
     await pool.connect();
     const request = pool.request();
 
-    const madaily = req.query.madaily;
+    const cccd = req.query.cccd;
     const nam = parseInt(req.query.nam);
 
-    if (!madaily || !nam) {
+    if (!cccd || !nam) {
       return res.status(400).json({
         success: false,
-        message: "Thiếu madaily hoặc năm",
+        message: "Thiếu cccd hoặc năm",
       });
     }
 
@@ -3083,13 +3085,13 @@ router.get("/baocao-tongtien-daily-theo-thang-nam", async (req, res) => {
       WHERE 
         TRY_CONVERT(datetime, ngaykekhai, 105) IS NOT NULL
         AND YEAR(CONVERT(datetime, ngaykekhai, 105)) = @nam
-        AND madaily = @madaily
+        AND RIGHT(sohoso, 12) = @cccd
       GROUP BY MONTH(CONVERT(datetime, ngaykekhai, 105))
       ORDER BY thang
     `;
 
     request.input("nam", nam);
-    request.input("madaily", madaily);
+    request.input("cccd", cccd);
 
     const result = await request.query(query);
     const data = result.recordset;
@@ -3344,7 +3346,6 @@ router.get("/bienlai-search-diemthu", async (req, res) => {
 
   try {
     const {
-      madaily,
       active,
       ngaykekhai,
       ngaykekhaiden,
@@ -3360,12 +3361,10 @@ router.get("/bienlai-search-diemthu", async (req, res) => {
     const limitNumber = parseInt(limit, 10);
     const offset = (pageNumber - 1) * limitNumber;
 
-    let query = `SELECT * FROM bienlaidientu WHERE RIGHT(sohoso, 12) = '${cccd}'`;
-    let queryCount = `SELECT COUNT(*) AS totalCount FROM bienlaidientu WHERE RIGHT(sohoso, 12) = '${cccd}'`;
+    let query = `SELECT * FROM bienlaidientu WHERE cccd_nguoithutien = '${cccd}'`;
+    let queryCount = `SELECT COUNT(*) AS totalCount FROM bienlaidientu WHERE cccd_nguoithutien = '${cccd}'`;
 
     const request = pool.request();
-
-    request.input("madaily", madaily);
 
     if (active === "1" || active === "0") {
       query += " AND active = @active";
@@ -3414,7 +3413,6 @@ router.get("/bienlai-search-diemthu", async (req, res) => {
 
     // Tính count
     const countRequest = pool.request();
-    countRequest.input("madaily", madaily);
     if (active === "1" || active === "0")
       countRequest.input("active", active === "1" ? 1 : 0);
     if (ngaykekhai && !ngaykekhaiden)
