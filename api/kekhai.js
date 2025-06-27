@@ -34,6 +34,7 @@ if (checkDB === "tcdvthu_ansinh159") {
 } else {
   thumucbienlai =
     "E:\\CODE_APP\\TCDVTHU\\ANSINH68\\tcdvthu_ansinh68_client\\static\\bienlaidientu";
+    // "D:\\";  
   urlServer = "14.224.129.177:1973";
   urlServerBackend = "14.224.129.177:4209"; // máy chủ tuấn pda
 }
