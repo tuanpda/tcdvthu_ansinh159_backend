@@ -27,7 +27,7 @@ if (checkDB === "tcdvthu_ansinh159") {
     "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
   // "D:\\";    // test máy tuấn máy bàn
   // var folderBienlaidientu =
-  // "/Users/apple/Documents/code/p_159/tcdvthu_ansinh159_client/static/bienlaidientu"; // macos
+  // "/Users/wolf/Code\ Project/"; // macos
   // "/Users/apple/Documents/code/p_159";
   urlServer = "14.224.129.177:1970";
   urlServerBackend = "14.224.129.177:4213"; // máy chủ tuấn pda
@@ -1006,8 +1006,8 @@ router.post("/cancel-invoice-status", async (req, res) => {
     const request = transaction.request();
     await request
       .input("_id", _id)
-      .input("ghichu", ghichu)
-      .query(`UPDATE kekhai SET trangthai=1, ghichu=@ghichu WHERE _id=@_id`);
+      .input("motaloi", ghichu)
+      .query(`UPDATE kekhai SET trangthai=1, motaloi=@ghichu WHERE _id=@_id`);
 
     await transaction.commit();
 
