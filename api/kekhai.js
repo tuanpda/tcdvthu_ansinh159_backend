@@ -1006,7 +1006,7 @@ router.post("/cancel-invoice-status", async (req, res) => {
     const request = transaction.request();
     await request
       .input("_id", _id)
-      .input("motaloi", ghichu)
+      .input("ghichu", ghichu)
       .query(`UPDATE kekhai SET trangthai=1, motaloi=@ghichu WHERE _id=@_id`);
 
     await transaction.commit();
