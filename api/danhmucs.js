@@ -316,6 +316,26 @@ WHERE matinh = '42'
   }
 });
 
+// danh mục bệnh viện cho thị xã kỳ anh
+router.get("/dmbenhvienwithtinh-thachha", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool.request()
+      .query(`SELECT * 
+        FROM dm_benhvien 
+        WHERE matinh = '42'
+          AND (
+            diachi LIKE N'%thạch hà%' 
+            OR diachi LIKE N'%thành phố%' 
+            OR diachi LIKE N'%cẩm xuyên%'
+          )`);
+    const benhvien = result.recordset;
+    res.json(benhvien);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
 // danh mục xã cho thị xã kỳ anh
 router.get("/dmxaphuong-camxuyen", async (req, res) => {
   try {
@@ -516,6 +536,65 @@ router.get("/diaphuonghtisall", async (req, res) => {
       .request()
       .query(`SELECT * FROM dm_tylediaphuonghtis`);
     const kq = result.recordset;
+    res.json(kq);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// HÀNH CHÍNH CAP
+router.get("/hanhchinh2cap-tinh", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .query(`select distinct(province_code), name from hanhchinh2cap`);
+    const kq = result.recordset;
+    res.json(kq);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+router.get("/hanhchinh2cap-xa-with-ma-tinh", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input('province_code', req.query.province_code)
+      .query(`select distinct(ward_code), ward_name from hanhchinh2cap where province_code=@province_code`);
+    const kq = result.recordset;
+    
+    res.json(kq);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+router.get("/hanhchinh2cap-find-tentinh", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input('province_code', req.query.province_code)
+      .query(`select distinct(name) from hanhchinh2cap where province_code=@province_code`);
+    const kq = result.recordset;
+    
+    res.json(kq);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+router.get("/hanhchinh2cap-find-tenxa", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input('old_ward_code', req.query.old_ward_code)
+      .query(`select ward_code, ward_name from hanhchinh2cap where old_ward_code=@old_ward_code`);
+    const kq = result.recordset;
+    
     res.json(kq);
   } catch (error) {
     res.status(500).json(error);
