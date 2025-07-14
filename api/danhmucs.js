@@ -592,7 +592,7 @@ router.get("/hanhchinh2cap-find-tenxa", async (req, res) => {
     const result = await pool
       .request()
       .input('old_ward_code', req.query.old_ward_code)
-      .query(`select ward_code, ward_name from hanhchinh2cap where old_ward_code=@old_ward_code`);
+      .query(`select * from hanhchinh2cap where old_ward_code=@old_ward_code`);
     const kq = result.recordset;
     
     res.json(kq);
