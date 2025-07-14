@@ -601,4 +601,20 @@ router.get("/hanhchinh2cap-find-tenxa", async (req, res) => {
   }
 });
 
+// tìm mã và tên quận huyện cũ theo xã cũ
+router.get("/thongtinquanhuyencu", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input('maxaphuong', req.query.maxaphuong)
+      .query(`select * from dm_xaphuong where  maxaphuong=@maxaphuong`);
+    const kq = result.recordset[0];
+    
+    res.json(kq);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
 module.exports = router;
