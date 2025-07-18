@@ -20,31 +20,34 @@ const PDFDocument = require("pdfkit");
 
 let checkDB = process.env.SQL_DATABASE;
 let thumucbienlai = "";
+let thumucbienlaidahuy = "";
 let urlServer = "";
 let urlServerBackend;
 if (checkDB === "tcdvthu_ansinh159") {
   thumucbienlai =
     "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
-  // "D:\\";    // test máy tuấn máy bàn
+  thumucbienlaidahuy =
+    "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu\\bienlaidahuy";
   // var folderBienlaidientu =
   // "/Users/wolf/Code\ Project/"; // macos
   // "/Users/apple/Documents/code/p_159";
   urlServer = "14.224.129.177:1970";
   urlServerBackend = "14.224.129.177:4213"; // máy chủ tuấn pda
-} else {
+} else if (checkDB === "tcdvthu_ansinhhonglam"){
   thumucbienlai =
-    "E:\\CODE_APP\\TCDVTHU\\ANSINH68\\tcdvthu_ansinh68_client\\static\\bienlaidientu";
+    "E:\\CODE_APP\\TCDVTHU\\ANSINHHONGLAM\\honglam_client\\static\\bienlaidientu";
+  thumucbienlaidahuy =
+    "E:\\CODE_APP\\TCDVTHU\\ANSINHHONGLAM\\honglam_client\\static\\bienlaidientu\\bienlaidahuy";
     // "D:\\";  
-  urlServer = "14.224.129.177:1973";
-  urlServerBackend = "14.224.129.177:4209"; // máy chủ tuấn pda
+    // "/Users/wolf/Code\ Project/";
 }
 
-// console.log("=====================");
-// console.log("Bạn đang sử dụng cơ sở dữ liệu: " + checkDB);
-// console.log("Thư mục biên lai: " + thumucbienlai);
-// console.log("URL máy chủ: " + urlServer);
-// console.log("URL máy chủ backend: " + urlServerBackend);
-// console.log("=====================");
+console.log("=====================");
+console.log("Bạn đang sử dụng cơ sở dữ liệu: " + checkDB);
+console.log("Thư mục biên lai: " + thumucbienlai);
+console.log("URL máy chủ: " + urlServer);
+console.log("URL máy chủ backend: " + urlServerBackend);
+console.log("=====================");
 
 // SET STORAGE
 var storage = multer.diskStorage({
@@ -60,66 +63,17 @@ var storage = multer.diskStorage({
   },
 });
 
-var upload = multer({ storage: storage });
-
-// ✅ Tạo đường dẫn đúng tuyệt đối đến thư mục `static/bienlaidientu`
-const folderBienlaidientu = path.join(
-  __dirname,
-  "..",
-  "static",
-  "bienlaidientu"
-);
-
-// ✅ Nếu thư mục chưa tồn tại thì tạo nó
-if (!fs.existsSync(folderBienlaidientu)) {
-  fs.mkdirSync(folderBienlaidientu, { recursive: true });
-}
-
-router.post("/tao-bienlai-demo", async (req, res) => {
-  try {
-    const filename = `demo-${Date.now()}.pdf`;
-    const filePath = path.join(folderBienlaidientu, filename);
-
-    const doc = new PDFDocument();
-    const stream = fs.createWriteStream(filePath);
-    doc.pipe(stream);
-
-    // Nội dung demo
-    doc.fontSize(20).text("BIÊN LAI THU TIỀN (DEMO)", { align: "center" });
-    doc.moveDown();
-    doc.fontSize(12).text("Họ tên: Nguyễn Văn A");
-    doc.text("Số tiền: 500,000 VNĐ");
-    doc.text("Nội dung: Đóng BHYT tự nguyện");
-    doc.moveDown(2);
-    doc.text("Người nộp tiền", 100, doc.y, { align: "left" });
-    doc.text("Người thu tiền", 350, doc.y, { align: "right" });
-    doc.text("Nguyễn Văn A", 100, doc.y + 20, { align: "left" });
-    doc.text("Cán bộ thu", 350, doc.y + 20, { align: "right" });
-
-    doc.end();
-
-    stream.on("finish", () => {
-      return res.json({
-        success: true,
-        message: "Tạo biên lai demo thành công",
-        filePath: filePath,
-        fileUrl: `http://${urlServerBackend}/static/bienlaidientu/${filename}`,
-      });
-    });
-
-    stream.on("error", (err) => {
-      console.error("Lỗi khi ghi file PDF:", err);
-      return res
-        .status(500)
-        .json({ success: false, message: "Không thể ghi file PDF" });
-    });
-  } catch (err) {
-    console.error("Lỗi tạo PDF:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Lỗi server khi tạo PDF" });
-  }
+var storageHuy = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, thumucbienlaidahuy);
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname);
+  },
 });
+
+var upload = multer({ storage: storage });
+var uploadHuy = multer({ storage: storageHuy });
 
 router.post("/upload-bienlai", upload.single("pdf"), (req, res) => {
   if (!req.file) {
@@ -128,6 +82,19 @@ router.post("/upload-bienlai", upload.single("pdf"), (req, res) => {
 
   return res.json({ message: "Lưu thành công", path: req.file.path });
 });
+
+// Ghi biên lai đã hủy
+router.post("/upload-bienlai-huy", uploadHuy.single("pdf"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "Không có file" });
+  }
+
+  return res.json({
+    message: "Lưu vào thư mục đã hủy thành công",
+    path: req.file.path,
+  });
+});
+
 
 // add ke khai chạy lẻ từng dòng
 router.post("/add-kekhai", async (req, res) => {
@@ -884,7 +851,7 @@ router.post("/ghidulieubienlai", async (req, res) => {
       .input("tothon", dulieubienlai.tothon)
       .input("tenquanhuyen", dulieubienlai.tenquanhuyen)
       .input("tentinh", dulieubienlai.tentinh)
-      .input("active", 0)
+      .input("active", 3)
       .input("urlNameInvoice", dulieubienlai.urlNameInvoice)
       .input("cccd_nguoithutien", dulieubienlai.cccd_nguoithutien).query(`
                   INSERT INTO bienlaidientu (_id_hskk, sobienlai, ngaybienlai, hoten, masobhxh, ngaysinh, gioitinh, cccd, sodienthoai, nguoithutien, loaihinh, sothang,
@@ -900,7 +867,7 @@ router.post("/ghidulieubienlai", async (req, res) => {
       .input("ngaykhoitao", dulieubienlai.ngaybienlai)
       .input("namtaichinh", dulieubienlai.currentYear)
       .input("ghichu", dulieubienlai.maSoBhxh)
-      .input("active", 0)
+      .input("active", 3)
       .input("hosoIdentity", dulieubienlai.hosoIdentity).query(`
           INSERT INTO bienlai (sobienlai, ngaykhoitao, namtaichinh, ghichu, active, hosoIdentity) 
           VALUES (@sobienlai, @ngaykhoitao, @namtaichinh, @ghichu, @active, @hosoIdentity)
@@ -928,9 +895,29 @@ router.post("/ghidulieubienlai", async (req, res) => {
   }
 });
 
+router.post("/find-bienlaidientu-huybienlai", async (req, res) => {
+  // console.log(req.body);
+
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .input("hosoIdentity", req.body.hosoIdentity)
+      .query(`select * from bienlaidientu where hosoIdentity = @hosoIdentity`);
+    const hs = result.recordset[0];
+    res.json({
+      success: true,
+      hs,
+    });
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
 // xác nhận phê duyệt hồ sơ
 router.post("/apply-invoice-status", async (req, res) => {
-  const { _id, hoten, masobhxh, hosoIdentity } = req.body;
+  const { _id, hoten, masobhxh, hosoIdentity, nguoipheduyet, ngaypheduyet } =
+    req.body;
 
   let transaction = null;
 
@@ -944,7 +931,11 @@ router.post("/apply-invoice-status", async (req, res) => {
     const request1 = transaction.request();
     await request1
       .input("_id", _id)
-      .query(`UPDATE kekhai SET status_naptien=1 WHERE _id=@_id`);
+      .input("nguoipheduyet", nguoipheduyet)
+      .input("ngaypheduyet", ngaypheduyet)
+      .query(
+        `UPDATE kekhai SET status_naptien=1, nguoipheduyet=@nguoipheduyet, ngaypheduyet=@ngaypheduyet WHERE _id=@_id`
+      );
 
     // Câu 2: cập nhật bảng bienlaidientu
     const request2 = transaction.request();
@@ -992,7 +983,17 @@ router.post("/apply-invoice-status", async (req, res) => {
 router.post("/cancel-invoice-status", async (req, res) => {
   // console.log(req.body);
 
-  const { _id, hoten, masobhxh, ghichu } = req.body;
+  const {
+    _id,
+    hoten,
+    masobhxh,
+    nguoipheduyet,
+    ngaypheduyet,
+    hosoIdentity,
+    lydohuy,
+    ngayhuybienlai,
+    nguoihuybienlai,
+  } = req.body;
 
   let transaction = null;
 
@@ -1006,8 +1007,38 @@ router.post("/cancel-invoice-status", async (req, res) => {
     const request = transaction.request();
     await request
       .input("_id", _id)
-      .input("ghichu", ghichu)
-      .query(`UPDATE kekhai SET trangthai=1, motaloi=@ghichu WHERE _id=@_id`);
+      .input("lydohuy", lydohuy)
+      .input("nguoipheduyet", nguoipheduyet)
+      .input("ngaypheduyet", ngaypheduyet)
+      .query(
+        `UPDATE kekhai SET trangthai=1, lydohuy=@lydohuy, nguoipheduyet=@nguoipheduyet, ngaypheduyet=@ngaypheduyet WHERE _id=@_id`
+      );
+
+    // Câu 2: cập nhật bảng bienlaidientu
+    const request2 = transaction.request();
+    await request2
+      .input("hosoIdentity", hosoIdentity)
+      .input("lydohuy", lydohuy)
+      .input("ngayhuybienlai", ngayhuybienlai)
+      .input("nguoihuybienlai", nguoihuybienlai)
+      .query(
+        `UPDATE bienlaidientu SET active=0, lydohuy=@lydohuy, ngayhuybienlai=@ngayhuybienlai, 
+            nguoihuybienlai=@nguoihuybienlai
+          WHERE hosoIdentity=@hosoIdentity`
+      );
+
+    // Câu 3: cập nhật bảng bienlai
+    const request3 = transaction.request();
+    await request3
+      .input("hosoIdentity", hosoIdentity)
+      .input("lydohuy", lydohuy)
+      .input("ngayhuybienlai", ngayhuybienlai)
+      .input("nguoihuybienlai", nguoihuybienlai)
+      .query(
+        `UPDATE bienlai SET active=0, lydohuy=@lydohuy, ngayhuybienlai=@ngayhuybienlai, 
+            nguoihuybienlai=@nguoihuybienlai
+          WHERE hosoIdentity=@hosoIdentity`
+      );
 
     await transaction.commit();
 
@@ -1019,6 +1050,126 @@ router.post("/cancel-invoice-status", async (req, res) => {
         hoten,
         masobhxh,
         ghichu,
+      },
+    });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    res.status(500).json({
+      success: false,
+      message: `Thất bại cập nhật _id: ${_id}`,
+      error: error.message,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
+      },
+    });
+  } finally {
+    if (pool.connected) await pool.close();
+  }
+});
+
+// reset hồ sơ từ đã huỷ duyệt sang chưa phê duyệt
+router.post("/reset-hoso-from-dahuy-to-chuaduyet", async (req, res) => {
+  // console.log(req.body);
+  const { _id, hoten, masobhxh, hosoIdentity } = req.body;
+  let transaction = null;
+  try {
+    await pool.connect();
+
+    transaction = new Transaction(pool);
+    await transaction.begin();
+
+    const request = transaction.request();
+    await request
+      .input("_id", _id)
+      .query(`UPDATE kekhai SET trangthai=0 where _id=@_id`);
+
+    // Câu 2: cập nhật bảng bienlaidientu
+    const request2 = transaction.request();
+    await request2.input("hosoIdentity", hosoIdentity).query(
+      `UPDATE bienlaidientu SET active=3, lydohuy='', ngayhuybienlai='', 
+            nguoihuybienlai=''
+          WHERE hosoIdentity=@hosoIdentity`
+    );
+
+    // Câu 3: cập nhật bảng bienlai
+    const request3 = transaction.request();
+    await request3.input("hosoIdentity", hosoIdentity).query(
+      `UPDATE bienlai SET active=3, lydohuy='', ngayhuybienlai='', 
+            nguoihuybienlai=''
+          WHERE hosoIdentity=@hosoIdentity`
+    );
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      message: `Cập nhật thành công cho _id: ${_id}`,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
+      },
+    });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    res.status(500).json({
+      success: false,
+      message: `Thất bại cập nhật _id: ${_id}`,
+      error: error.message,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
+      },
+    });
+  } finally {
+    if (pool.connected) await pool.close();
+  }
+});
+
+// xác nhận reset hồ sơ từ đã phê duyệt sang chưa phê duyệt
+router.post("/reset-hoso-from-daduyet-to-chuaduyet", async (req, res) => {
+  const { _id, hoten, masobhxh, hosoIdentity } = req.body;
+
+  let transaction = null;
+
+  try {
+    await pool.connect();
+
+    transaction = new Transaction(pool);
+    await transaction.begin();
+
+    // Câu 1: cập nhật bảng kekhai
+    const request1 = transaction.request();
+    await request1
+      .input("_id", _id)
+      .query(`UPDATE kekhai SET status_naptien=0 WHERE _id=@_id`);
+
+    // Câu 2: cập nhật bảng bienlaidientu
+    const request2 = transaction.request();
+    await request2
+      .input("hosoIdentity", hosoIdentity)
+      .query(
+        `UPDATE bienlaidientu SET active=3 WHERE hosoIdentity=@hosoIdentity`
+      );
+
+    // Câu 3: cập nhật bảng bienlai
+    const request3 = transaction.request();
+    await request3
+      .input("hosoIdentity", hosoIdentity)
+      .query(`UPDATE bienlai SET active=3 WHERE hosoIdentity=@hosoIdentity`);
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      message: `Cập nhật thành công cho _id: ${_id}`,
+      data: {
+        _id,
+        hoten,
+        masobhxh,
       },
     });
   } catch (error) {
@@ -1073,90 +1224,6 @@ router.post("/updatestatushoso", async (req, res) => {
   }
 });
 
-// reset hồ sơ từ đã huỷ duyệt sang chưa phê duyệt
-router.post("/reset-hoso-from-dahuy-to-chuaduyet", async (req, res) => {
-  // console.log(req.body);
-  const { _id, hoten, masobhxh } = req.body;
-  try {
-    await pool.connect();
-    const result = await pool
-      .request()
-      .input("_id", _id)
-      .query(`UPDATE kekhai SET trangthai=0 where _id=@_id`);
-
-    res.json({
-      success: true,
-      message: `Cập nhật thành công cho _id: ${_id}`,
-      data: {
-        _id,
-        hoten,
-        masobhxh,
-      },
-    });
-  } catch (error) {
-    res.status(500).json(error);
-  }
-});
-
-// xác nhận reset hồ sơ từ đã phê duyệt sang chưa phê duyệt
-router.post("/reset-hoso-from-daduyet-to-chuaduyet", async (req, res) => {
-  const { _id, hoten, masobhxh, hosoIdentity } = req.body;
-
-  let transaction = null;
-
-  try {
-    await pool.connect();
-
-    transaction = new Transaction(pool);
-    await transaction.begin();
-
-    // Câu 1: cập nhật bảng kekhai
-    const request1 = transaction.request();
-    await request1
-      .input("_id", _id)
-      .query(`UPDATE kekhai SET status_naptien=0 WHERE _id=@_id`);
-
-    // Câu 2: cập nhật bảng bienlaidientu
-    const request2 = transaction.request();
-    await request2
-      .input("hosoIdentity", hosoIdentity)
-      .query(
-        `UPDATE bienlaidientu SET active=0 WHERE hosoIdentity=@hosoIdentity`
-      );
-
-    // Câu 3: cập nhật bảng bienlai
-    const request3 = transaction.request();
-    await request3
-      .input("hosoIdentity", hosoIdentity)
-      .query(`UPDATE bienlai SET active=0 WHERE hosoIdentity=@hosoIdentity`);
-
-    await transaction.commit();
-
-    res.json({
-      success: true,
-      message: `Cập nhật thành công cho _id: ${_id}`,
-      data: {
-        _id,
-        hoten,
-        masobhxh,
-      },
-    });
-  } catch (error) {
-    if (transaction) await transaction.rollback();
-    res.status(500).json({
-      success: false,
-      message: `Thất bại cập nhật _id: ${_id}`,
-      error: error.message,
-      data: {
-        _id,
-        hoten,
-        masobhxh,
-      },
-    });
-  } finally {
-    if (pool.connected) await pool.close();
-  }
-});
 
 router.patch("/capnhatkekhai", async (req, res) => {
   // console.log(req.body);
@@ -1979,7 +2046,7 @@ router.get("/kykekhai-search-hoso", async (req, res) => {
       hoten,
       tendaily,
       maloaihinh,
-      trangthaihs,
+      // trangthaihs,
       page = 1,
       limit = 30,
     } = req.query;
@@ -2003,18 +2070,18 @@ router.get("/kykekhai-search-hoso", async (req, res) => {
     // Thêm các điều kiện tìm kiếm nếu có
     // console.log(trangthaihs);
     
-    if (trangthaihs) {
-      if(trangthaihs == 'dapheduyet'){
-        query += " AND trangthai = 0 and status_naptien=1";
-        queryCount += " AND trangthai = 0 and status_naptien=1";
-      }else if(trangthaihs == 'dahuyduyet'){
-        query += " AND trangthai = 1";
-        queryCount += " AND trangthai = 1";
-      }else if(trangthaihs == 'chuapheduyet'){
-        query += " AND trangthai = 0 and status_naptien=0";
-        queryCount += " AND trangthai = 0 and status_naptien=0";
-      }
-    }
+    // if (trangthaihs) {
+    //   if(trangthaihs == 'dapheduyet'){
+    //     query += " AND trangthai = 0 and status_naptien=1";
+    //     queryCount += " AND trangthai = 0 and status_naptien=1";
+    //   }else if(trangthaihs == 'dahuyduyet'){
+    //     query += " AND trangthai = 1";
+    //     queryCount += " AND trangthai = 1";
+    //   }else if(trangthaihs == 'chuapheduyet'){
+    //     query += " AND trangthai = 0 and status_naptien=0";
+    //     queryCount += " AND trangthai = 0 and status_naptien=0";
+    //   }
+    // }
 
     if (kykekhai) {
       query += " AND kykekhai = @kykekhai";
@@ -2143,7 +2210,7 @@ router.get("/kykekhai-search-hoso-diemthu", async (req, res) => {
       hoten,
       madaily,
       cccd,
-      trangthaihs,
+      // trangthaihs,
       page = 1,
       limit = 30,
     } = req.query;
@@ -2166,18 +2233,18 @@ router.get("/kykekhai-search-hoso-diemthu", async (req, res) => {
       `SELECT COUNT(*) AS totalCount FROM kekhai WHERE RIGHT(sohoso, 12) = '${cccd}'`;
 
     // Thêm các điều kiện tìm kiếm nếu có
-    if (trangthaihs) {
-      if(trangthaihs == 'dapheduyet'){
-        query += " AND trangthai = 0 and status_naptien=1";
-        queryCount += " AND trangthai = 0 and status_naptien=1";
-      }else if(trangthaihs == 'dahuyduyet'){
-        query += " AND trangthai = 1";
-        queryCount += " AND trangthai = 1";
-      }else if(trangthaihs == 'chuapheduyet'){
-        query += " AND trangthai = 0 and status_naptien=0";
-        queryCount += " AND trangthai = 0 and status_naptien=0";
-      }
-    }
+    // if (trangthaihs) {
+    //   if(trangthaihs == 'dapheduyet'){
+    //     query += " AND trangthai = 0 and status_naptien=1";
+    //     queryCount += " AND trangthai = 0 and status_naptien=1";
+    //   }else if(trangthaihs == 'dahuyduyet'){
+    //     query += " AND trangthai = 1";
+    //     queryCount += " AND trangthai = 1";
+    //   }else if(trangthaihs == 'chuapheduyet'){
+    //     query += " AND trangthai = 0 and status_naptien=0";
+    //     queryCount += " AND trangthai = 0 and status_naptien=0";
+    //   }
+    // }
 
     if (kykekhai) {
       query += " AND kykekhai = @kykekhai";
