@@ -346,7 +346,7 @@ router.post(
       // Ghép đường dẫn và tên tệp bằng phương thức path.join()
       const filePath = path.join(basePath, fileName);
       // console.log(filePath);
-      if (fileName !== "image-default.jpg") {
+      if (fileName !== "default-image.png") {
         fs.unlink(filePath, (err) => {
           if (err) {
             console.error("Đã xảy ra lỗi khi xóa tệp:", err);
@@ -574,6 +574,25 @@ router.post("/account", upload.single("avatar"), async (req, res) => {
     // Đổi đường dẫn khi deploy lên máy chủ
     linkAvatar = `http://${urlServer}/avatar/${req.file.filename}`;
   }
+
+  let newMaDaiLy = "DT0001"; // mặc định nếu chưa có người nào
+
+  // Lấy mã đại lý lớn nhất hiện tại
+  const madailyResult = await pool.request().query(`
+      SELECT TOP 1 madaily 
+      FROM users 
+      WHERE madaily LIKE 'DT%' 
+      ORDER BY madaily DESC;
+    `);
+
+  if (madailyResult.recordset.length > 0) {
+    const lastMa = madailyResult.recordset[0].madaily; // VD: "DT0099"
+    const numberPart = parseInt(lastMa.slice(2), 10); // Lấy phần số: 99
+    const nextNumber = numberPart + 1; // Tăng: 100
+    const paddedNumber = nextNumber.toString().padStart(4, "0"); // "0100"
+    newMaDaiLy = `DT${paddedNumber}`; // "DT0100"
+  }
+
   try {
     await pool.connect();
     const result = await pool
@@ -586,7 +605,7 @@ router.post("/account", upload.single("avatar"), async (req, res) => {
       .input("tenhuyen", req.body.tenhuyen)
       .input("maxa", req.body.maxa)
       .input("tenxa", req.body.tenxa)
-      .input("madaily", req.body.madaily)
+      .input("madaily", newMaDaiLy)
       .input("tendaily", req.body.tendaily)
       .input("nvcongty", req.body.nvcongty)
       .input("diachi", req.body.diachi)
