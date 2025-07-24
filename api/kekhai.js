@@ -3363,7 +3363,6 @@ router.get("/thongke-hosokekhai-tonghop", async (req, res) => {
   }
 });
 
-// chart mã loại kê khai theo tháng và năm (lọc theo cả năm và tháng)
 router.get("/baocao-loaihinh-kekhai-theo-thang-nam", async (req, res) => {
   try {
     await pool.connect();
@@ -3414,7 +3413,7 @@ router.get("/baocao-loaihinh-kekhai-theo-thang-nam-daily", async (req, res) => {
         TRY_CONVERT(datetime, ngaykekhai, 105) IS NOT NULL
         AND YEAR(CONVERT(datetime, ngaykekhai, 105)) = ${nam}
         AND MONTH(CONVERT(datetime, ngaykekhai, 105)) = ${thang}
-        AND RIGHT(sohoso, 12) = ${cccd}
+        AND RIGHT(sohoso, 12) = '${cccd}'
       GROUP BY maloaihinh
       ORDER BY maloaihinh
     `;
@@ -3438,16 +3437,19 @@ router.get("/baocao-tongtien-theo-daily-thang-nam", async (req, res) => {
     const thang = parseInt(req.query.thang);
 
     const query = `
-      SELECT 
+      SELECT
           RIGHT(sohoso, 12) AS cccd,
+          tennguoitao,
           SUM(CAST(sotien AS FLOAT)) AS tongtien
       FROM kekhai
-      WHERE 
+      WHERE
           TRY_CONVERT(datetime, ngaykekhai, 105) IS NOT NULL
           AND YEAR(TRY_CONVERT(datetime, ngaykekhai, 105)) = ${nam}
           AND MONTH(TRY_CONVERT(datetime, ngaykekhai, 105)) = ${thang}
-      GROUP BY RIGHT(sohoso, 12)
+          AND status_naptien = 1
+      GROUP BY RIGHT(sohoso, 12), tennguoitao
       ORDER BY tongtien DESC;
+
 
     `;
 
@@ -3460,8 +3462,6 @@ router.get("/baocao-tongtien-theo-daily-thang-nam", async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi server", error });
   }
 });
-
-// Route: /api/kekhai/baocao-tongtien-daily-theo-thang-nam?madaily=DT0035&nam=2025
 
 router.get("/baocao-tongtien-daily-theo-thang-nam", async (req, res) => {
   try {
@@ -3487,8 +3487,10 @@ router.get("/baocao-tongtien-daily-theo-thang-nam", async (req, res) => {
         TRY_CONVERT(datetime, ngaykekhai, 105) IS NOT NULL
         AND YEAR(CONVERT(datetime, ngaykekhai, 105)) = @nam
         AND RIGHT(sohoso, 12) = @cccd
+        AND status_naptien = 1
       GROUP BY MONTH(CONVERT(datetime, ngaykekhai, 105))
-      ORDER BY thang
+      ORDER BY thang;
+
     `;
 
     request.input("nam", nam);
@@ -3501,6 +3503,73 @@ router.get("/baocao-tongtien-daily-theo-thang-nam", async (req, res) => {
   } catch (error) {
     console.error("Lỗi truy vấn tổng tiền theo tháng:", error);
     res.status(500).json({ success: false, message: "Lỗi server", error });
+  }
+});
+
+// tra cứu biên lai điện tử cho cán bộ BHXH
+router.get("/search-bienlai-dientu-bhxh", async (req, res) => {
+  // console.log(req.query);
+
+  try {
+    await pool.connect();
+
+    const { loaihinh, ngaybienlaitu, ngaybienlaiden, masobhxh, hoten } =
+      req.query;
+
+    // Mảng chứa điều kiện lọc
+    const conditions = [];
+    const request = pool.request(); // chuẩn bị request cho SQL Server
+
+    if (loaihinh) {
+      conditions.push("loaihinh = @loaihinh");
+      request.input("loaihinh", loaihinh);
+    }
+
+    if (ngaybienlaitu) {
+      conditions.push(
+        "CONVERT(date, TRY_CONVERT(datetime, ngaybienlai, 105)) >= @ngaybienlaitu"
+      );
+      request.input("ngaybienlaitu", ngaybienlaitu);
+    }
+
+    if (ngaybienlaiden) {
+      conditions.push(
+        "CONVERT(date, TRY_CONVERT(datetime, ngaybienlai, 105)) <= @ngaybienlaiden"
+      );
+      request.input("ngaybienlaiden", ngaybienlaiden);
+    }
+
+    if (masobhxh) {
+      conditions.push("masobhxh LIKE '%' + @masobhxh + '%'");
+      request.input("masobhxh", masobhxh);
+    }
+
+    if (hoten) {
+      conditions.push("hoten LIKE N'%' + @hoten + '%'");
+      request.input("hoten", hoten);
+    }
+
+    // Gộp điều kiện thành chuỗi WHERE
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const query = `
+      SELECT * FROM bienlaidientu
+      ${whereClause}
+      ORDER BY ngaybienlai DESC
+    `;
+
+    const result = await request.query(query);
+
+    res.json({
+      success: true,
+      hs: result.recordset,
+    });
+  } catch (error) {
+    console.error("Lỗi truy vấn:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi truy vấn dữ liệu", error });
   }
 });
 
